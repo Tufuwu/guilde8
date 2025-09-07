@@ -1,58 +1,50 @@
-"""
-Django-MongoEngine
-------------------
-
-Django support for MongoDB using MongoEngine.
-
-This is work-in-progress. Some things working, some don't. Fix what you need and make
-pull-request.
-
-Links
-`````
-
-* `development version
-  <https://github.com/MongoEngine/django-mongoengine>`_
-
-"""
+#!/usr/bin/env python
+from itertools import chain
 from setuptools import setup, find_packages
-import sys
-import os
+from pyinaturalist import __version__
 
-
-__version__ = '0.4.6'
-__description__ = 'Django support for MongoDB via MongoEngine'
-__license__ = 'BSD'
-__author__ = 'Ross Lawley'
-__email__ = 'ross.lawley@gmail.com'
-
-
-sys.path.insert(0, os.path.dirname(__file__))
+# These package categories allow tox and build environments to install only what they need
+extras_require = {
+    # Packages used for CI jobs
+    "build": ["coveralls", "twine", "wheel"],
+    # Packages used for documentation builds
+    "docs": [
+        "m2r2",
+        "Sphinx~=3.2.1",
+        "sphinx-autodoc-typehints",
+        "sphinx-automodapi",
+        "sphinx-rtd-theme",
+        "sphinxcontrib-apidoc",
+    ],
+    # Packages used for testing both locally and in CI jobs
+    "test": [
+        "black==20.8b1",
+        "flake8",
+        "mypy",
+        "pytest>=5.0",
+        "pytest-cov",
+        "requests-mock>=1.7",
+        "tox>=3.15",
+    ],
+}
+# All development/testing packages combined
+extras_require["dev"] = list(chain.from_iterable(extras_require.values()))
 
 
 setup(
-    name='django-mongoengine',
+    name="pyinaturalist",
     version=__version__,
-    url='https://github.com/mongoengine/django-mongoengine',
-    download_url='https://github.com/mongoengine/django-mongoengine/tarball/master',
-    license=__license__,
-    author=__author__,
-    author_email=__email__,
-    description=__description__,
-    long_description=__doc__,
-    zip_safe=False,
-    platforms='any',
-    install_requires=["django>2.2,<3.3", "mongoengine>=0.14"],
-    packages=find_packages(exclude=('doc', 'docs',)),
+    author="Nicolas Noé",
+    author_email="nicolas@niconoe.eu",
+    url="https://github.com/niconoe/pyinaturalist",
+    packages=find_packages(),
     include_package_data=True,
-    classifiers=[
-        'Development Status :: 4 - Beta',
-        'Environment :: Web Environment',
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python',
-        'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
-        'Topic :: Software Development :: Libraries :: Python Modules',
-        'Framework :: Django'
-    ]
+    install_requires=[
+        "keyring~=21.4.0",
+        "python-dateutil>=2.0",
+        "python-forge",
+        "requests>=2.24.0",
+    ],
+    extras_require=extras_require,
+    zip_safe=False,
 )

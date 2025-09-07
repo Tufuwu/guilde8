@@ -1,41 +1,31 @@
-Django-MongoEngine
-==================
+.. _index-page:
 
-A Django extension that provides integration with `MongoEngine <http://mongoengine.org/>`_.
+.. Omit README link to ReadTheDocs, since we're already on ReadTheDocs!
+.. mdinclude:: ../README.md
+    :end-line: 11
 
-It provides Forms support for your models.
+.. mdinclude:: ../README.md
+    :start-line: 13
 
 
-Quick links
-===========
+Contents
+========
 
 .. toctree::
-    :maxdepth: 1
+   :maxdepth: 2
 
-    changelog.rst
-    examples.rst
+   general_usage
+   endpoints
+   reference
+   contributing
+   authors
+   history
 
+Feedback
+========
 
-Installing Django-MongoEngine
-=============================
+If you have any suggestions or questions about **pyinaturalist** feel free to email me
+at nicolas@niconoe.eu.
 
-Install with **pip**
-
-::
-
-    pip install django-mongoengine
-
-
-Configuration
-=============
-
-Basic setup is easy, just fetch the extension
-
-::
-    TODO - write the docs
-
-
-Django DebugToolBar
-===================
-
-Taken from: https://github.com/hmarr/django-debug-toolbar-mongo
+If you encounter any errors or problems with **pyinaturalist**, please let me know!
+Open an Issue at the GitHub http://github.com/niconoe/pyinaturalist main repository.
