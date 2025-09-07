@@ -1,134 +1,103 @@
-======
-PyGEOS
-======
+pyramid_debugtoolbar
+====================
 
-.. Documentation at RTD — https://readthedocs.org
+``pyramid_debugtoolbar`` provides a debug toolbar useful while you're
+developing your Pyramid application.
 
-.. image:: https://readthedocs.org/projects/pygeos/badge/?version=latest
-	:alt: Documentation Status
-	:target: https://pygeos.readthedocs.io/en/latest/?badge=latest
-
-.. Github Actions status — https://github.com/pygeos/pygeos/actions
-
-.. image:: https://github.com/pygeos/pygeos/workflows/Conda/badge.svg
-	:alt: Github Actions status
-	:target: https://github.com/pygeos/pygeos/actions?query=workflow%3AConda
-
-.. Appveyor CI status — https://ci.appveyor.com
-
-.. image:: https://ci.appveyor.com/api/projects/status/jw48gpd88f188av6?svg=true
-	:alt: Appveyor CI status
-	:target: https://ci.appveyor.com/project/caspervdw/pygeos-3e5cu
-
-.. PyPI
-
-.. image:: https://badge.fury.io/py/pygeos.svg
-	:alt: PyPI
-	:target: https://badge.fury.io/py/pygeos
-
-.. Anaconda
-
-.. image:: https://anaconda.org/conda-forge/pygeos/badges/version.svg
-  :alt: Anaconda
-
-.. Zenodo
-
-.. image:: https://zenodo.org/badge/191151963.svg
-  :alt: Zenodo 
-  :target: https://zenodo.org/badge/latestdoi/191151963
+Note that ``pyramid_debugtoolbar`` is a blatant rip-off of Michael van
+Tellingen's ``flask-debugtoolbar`` (which itself was derived from Rob Hudson's
+``django-debugtoolbar``). It also includes a lightly sanded down version of the
+Werkzeug debugger code by Armin Ronacher and team.
 
 
-PyGEOS is a C/Python library with vectorized geometry functions. The geometry
-operations are done in the open-source geometry library GEOS. PyGEOS wraps
-these operations in NumPy ufuncs providing a performance improvement when
-operating on arrays of geometries.
+Documentation
+-------------
 
-Note: PyGEOS is a very young package. While the available functionality should
-be stable and working correctly, it's still possible that APIs change in upcoming
-releases. But we would love for you to try it out, give feedback or contribute!
-
-What is a ufunc?
-----------------
-
-A universal function (or ufunc for short) is a function that operates on
-n-dimensional arrays in an element-by-element fashion, supporting array
-broadcasting. The for-loops that are involved are fully implemented in C
-diminishing the overhead of the Python interpreter.
-
-Multithreading
---------------
-
-PyGEOS functions support multithreading. More specifically, the Global
-Interpreter Lock (GIL) is released during function execution. Normally in Python, the
-GIL prevents multiple threads from computing at the same time. PyGEOS functions
-internally releases this constraint so that the heavy lifting done by GEOS can be
-done in parallel, from a single Python process.
-
-Examples
---------
-
-Compare an grid of points with a polygon:
-
-.. code:: python
-
-  >>> geoms = points(*np.indices((4, 4)))
-  >>> polygon = box(0, 0, 2, 2)
-
-  >>> contains(polygon, geoms)
-
-    array([[False, False, False, False],
-           [False,  True, False, False],
-           [False, False, False, False],
-           [False, False, False, False]])
+The documentation of the current stable release of ``pyramid_debugtoolbar`` is
+available at
+https://docs.pylonsproject.org/projects/pyramid-debugtoolbar/en/latest/.
 
 
-Compute the area of all possible intersections of two lists of polygons:
+Demonstration
+-------------
 
-.. code:: python
+For a demonstration:
 
-  >>> from pygeos import box, area, intersection
+- Clone the ``pyramid_debugtoolbar`` trunk.
 
-  >>> polygons_x = box(range(5), 0, range(10, 15), 10)
-  >>> polygons_y = box(0, range(5), 10, range(10, 15))
+  .. code-block:: bash
 
-  >>> area(intersection(polygons_x[:, np.newaxis], polygons_y[np.newaxis, :]))
+      $ git clone https://github.com/Pylons/pyramid_debugtoolbar.git
 
-  array([[100.,  90.,  80.,  70.,  60.],
-       [ 90.,  81.,  72.,  63.,  54.],
-       [ 80.,  72.,  64.,  56.,  48.],
-       [ 70.,  63.,  56.,  49.,  42.],
-       [ 60.,  54.,  48.,  42.,  36.]])
+- Create a virtual environment in the workspace.
 
-See the documentation for more: https://pygeos.readthedocs.io
+  .. code-block:: bash
 
+      $ cd pyramid_debugtoolbar
+      $ python3 -m venv env
 
-Relationship to Shapely
------------------------
+- Install the ``pyramid_debugtoolbar`` trunk into the virtualenv.
 
-Both Shapely and PyGEOS are exposing the functionality of the GEOS C++ library
-to Python. While Shapely only deals with single geometries, PyGEOS provides
-vectorized functions to work with arrays of geometries, giving better
-performance and convenience for such usecases.
+  .. code-block:: bash
 
-There is active discussion and work toward integrating PyGEOS into Shapely:
+      $ env/bin/pip install -e .
 
-* latest proposal: https://github.com/shapely/shapely-rfc/pull/1
-* prior discussion: https://github.com/Toblerity/Shapely/issues/782
+- Install the ``pyramid_debugtoolbar/demo`` package into the virtualenv.
 
-For now PyGEOS is developed as a separate project.
+  .. code-block:: bash
 
-References
-----------
+      $ env/bin/pip install -e demo
 
-- GEOS: http://trac.osgeo.org/geos
-- Shapely: https://shapely.readthedocs.io/en/latest/
-- Numpy ufuncs: https://docs.scipy.org/doc/numpy/reference/ufuncs.html
-- Joris van den Bossche's blogpost: https://jorisvandenbossche.github.io/blog/2017/09/19/geopandas-cython/
-- Matthew Rocklin's blogpost: http://matthewrocklin.com/blog/work/2017/09/21/accelerating-geopandas-1
+- Run the ``pyramid_debugtoolbar`` package's ``demo/demo.py`` file using the
+  virtual environment's Python.
+
+  .. code-block:: bash
+
+      $ env/bin/python demo/demo.py
+
+Visit http://localhost:8080 in a web browser to see a page full of test
+options.
 
 
-Copyright & License
--------------------
+Testing
+-------
 
-PyGEOS is licensed under BSD 3-Clause license. Copyright (c) 2019, Casper van der Wel.
-GEOS is available under the terms of ​GNU Lesser General Public License (LGPL) 2.1 at https://trac.osgeo.org/geos.
+If you have ``tox`` installed, run all tests with:
+
+.. code-block:: bash
+
+    $ tox
+
+To run only a specific Python environment:
+
+.. code-block:: bash
+
+    $ tox -e py35
+
+If you don't have ``tox`` installed, you can install the testing requirements,
+then run the tests.
+
+.. code-block:: bash
+
+    $ python3 -m venv env
+    $ env/bin/pip install -e ".[testing]"
+    $ env/bin/nosetests
+
+
+Building documentation
+----------------------
+
+If you have ``tox`` installed, build the docs with:
+
+.. code-block:: bash
+
+    $ tox -e docs
+
+If you don't have ``tox`` installed, you can install the requirements to build
+the docs, then build them.
+
+.. code-block:: bash
+
+    $ env/bin/pip install -e ".[docs]"
+    $ cd docs
+    $ make clean html SPHINXBUILD=../env/bin/sphinx-build
