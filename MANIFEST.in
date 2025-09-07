@@ -1,5 +1,17 @@
-# Include the license file
+include .coveragerc
 include LICENSE
+include NEWS.rst
+include towncrier.ini
+include tox.ini
+exclude mypy.ini
+include src/incremental/py.typed
 
-# Include readme file
-include README.md
+recursive-include src/incremental *.py
+
+prune .travis
+prune tests
+
+exclude examplesetup.py
+prune src/exampleproj
+
+prune src/incremental/newsfragments
