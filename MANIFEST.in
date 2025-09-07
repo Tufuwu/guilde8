@@ -1,6 +1,4 @@
-include COPYING
+include LICENSE
 include README.md
-include ChangeLog.rst
-include AUTHORS.rst
-include tox.ini
-recursive-include test *.html *.md *.py
+include CHANGELOG.md
+recursive-include docs *

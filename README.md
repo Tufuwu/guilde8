@@ -1,86 +1,111 @@
-# html2text
+# Django Rest Multi Token Auth
 
-[![Build Status](https://secure.travis-ci.org/Alir3z4/html2text.png)](https://travis-ci.org/Alir3z4/html2text)
-[![Coverage Status](https://coveralls.io/repos/Alir3z4/html2text/badge.png)](https://coveralls.io/r/Alir3z4/html2text)
-[![Downloads](http://badge.kloud51.com/pypi/d/html2text.png)](https://pypi.org/project/html2text/)
-[![Version](http://badge.kloud51.com/pypi/v/html2text.png)](https://pypi.org/project/html2text/)
-[![Wheel?](http://badge.kloud51.com/pypi/wheel/html2text.png)](https://pypi.org/project/html2text/)
-[![Format](http://badge.kloud51.com/pypi/format/html2text.png)](https://pypi.org/project/html2text/)
-[![License](http://badge.kloud51.com/pypi/license/html2text.png)](https://pypi.org/project/html2text/)
+[![PyPI](https://img.shields.io/pypi/v/django-rest-multitokenauth)](https://pypi.org/project/django-rest-multitokenauth/)
+[![Build Status](https://travis-ci.org/anexia-it/django-rest-multitokenauth.svg?branch=master)](https://travis-ci.org/anexia-it/django-rest-multitokenauth)
+[![Codecov](https://img.shields.io/codecov/c/gh/anexia-it/django-rest-multitokenauth)](https://codecov.io/gh/anexia-it/django-rest-multitokenauth)
 
+This django app is an extension for the Django Rest Framework.
+It tries to overcome the limitation of Token Authentication, which only uses a single token per user. 
 
-html2text is a Python script that converts a page of HTML into clean, easy-to-read plain ASCII text. Better yet, that ASCII also happens to be valid Markdown (a text-to-HTML format).
+## How to use
 
-
-Usage: `html2text [filename [encoding]]`
-
-| Option                                                 | Description
-|--------------------------------------------------------|---------------------------------------------------
-| `--version`                                            | Show program's version number and exit
-| `-h`, `--help`                                         | Show this help message and exit
-| `--ignore-links`                                       | Don't include any formatting for links
-|`--escape-all`                                          | Escape all special characters.  Output is less readable, but avoids corner case formatting issues.
-| `--reference-links`                                    | Use reference links instead of links to create markdown
-| `--mark-code`                                          | Mark preformatted and code blocks with [code]...[/code]
-
-For a complete list of options see the [docs](https://github.com/Alir3z4/html2text/blob/master/docs/usage.md)
-
-
-Or you can use it from within `Python`:
-
+Install:
+```bash
+pip install django-rest-multitokenauth
 ```
->>> import html2text
->>>
->>> print(html2text.html2text("<p><strong>Zed's</strong> dead baby, <em>Zed's</em> dead.</p>"))
-**Zed's** dead baby, _Zed's_ dead.
+
+Add ``'django_rest_multitokenauth'`` to your ``INSTALLED_APPS`` in your Django settings file:
+```python
+INSTALLED_APPS = (
+    ...
+    'django.contrib.auth',
+    ...
+    'rest_framework',
+    ...
+    'django_rest_multitokenauth',
+    ...
+)
 
 ```
 
-
-Or with some configuration options:
-```
->>> import html2text
->>>
->>> h = html2text.HTML2Text()
->>> # Ignore converting links from HTML
->>> h.ignore_links = True
->>> print h.handle("<p>Hello, <a href='https://www.google.com/earth/'>world</a>!")
-Hello, world!
-
->>> print(h.handle("<p>Hello, <a href='https://www.google.com/earth/'>world</a>!"))
-
-Hello, world!
-
->>> # Don't Ignore links anymore, I like links
->>> h.ignore_links = False
->>> print(h.handle("<p>Hello, <a href='https://www.google.com/earth/'>world</a>!"))
-Hello, [world](https://www.google.com/earth/)!
-
-```
-
-*Originally written by Aaron Swartz. This code is distributed under the GPLv3.*
-
-
-## How to install
-
-`html2text` is available on pypi
-https://pypi.org/project/html2text/
-
-```
-$ pip install html2text
+Configure Django REST Framework to use ``'django_rest_multitokenauth.coreauthentication.MultiTokenAuthentication'``:
+```python
+REST_FRAMEWORK = {
+    ...
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        ...
+        'django_rest_multitokenauth.coreauthentication.MultiTokenAuthentication',
+        ...
+    ],
+    ...
+}
 ```
 
 
-## How to run unit tests
+And add the auth urls to your Django url settings:
+```python
+from django.conf.urls import url, include
 
-    tox
 
-To see the coverage results:
+urlpatterns = [
+    ...
+    url(r'^api/auth/', include('django_rest_multitokenauth.urls', namespace='multi_token_auth')),
+    ...
+]    
+```
 
-    coverage html
 
-then open the `./htmlcov/index.html` file in your browser.
+The following endpoints are provided:
 
-## Documentation
+ * `login` - takes username and password; on success an auth token is returned
+ * `logout`
 
-Documentation lives [here](https://github.com/Alir3z4/html2text/blob/master/docs/usage.md)
+## Signals
+
+* ``pre_auth(username, password)`` - Fired when an authentication (login) is starting
+* ``post_auth(user)`` - Fired on successful auth
+
+## Tests
+
+See folder [tests/](tests/). Basically, all endpoints are covered with multiple
+unit tests.
+
+Use this code snippet to run tests:
+```bash
+pip install tox
+tox
+```
+
+## Cache Backend
+
+If you want to use a cache for the session store, you can install [django-memoize](https://pythonhosted.org/django-memoize/) and add `'memoize'` to `INSTALLED_APPS`.
+
+Then you need to use ``CachedMultiTokenAuthentication`` instead of ``MultiTokenAuthentication``.
+
+```bash
+pip install django-memoize
+```
+
+## Django Compatibility Matrix
+
+If your project uses an older verison of Django or Django Rest Framework, you can choose an older version of this project.
+
+| This Project | Python Version | Django Version | Django Rest Framework |
+|--------------|----------------|----------------|-----------------------|
+| 1.4.*        | 3.5+           | 2.2+, 3.0+     | 3.9, 3.10, 3.11, 3.12 |
+| 1.3.*        | 2.7, 3.4+      | 1.11, 2.0+     | 3.6, 3.7, 3.8         |
+| 1.2.*        | 2.7, 3.4+      | 1.8, 1.11, 2.0+| 3.6, 3.7, 3.8         |
+
+Make sure to use at least `DRF 3.10` when using `Django 3.0` or newer.
+
+
+## Changelog / Releases
+
+All releases should be listed in the [releases tab on github](https://github.com/anexia-it/django-rest-multitokenauth/releases).
+
+See [CHANGELOG.md](CHANGELOG.md) for a more detailed listing.
+
+
+## License
+
+This project is published with the [BSD 3 Clause License](LICENSE). See [https://choosealicense.com/licenses/bsd-3-clause-clear/](https://choosealicense.com/licenses/bsd-3-clause-clear/) for more information about what this means.
