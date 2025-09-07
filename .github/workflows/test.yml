@@ -10,49 +10,31 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8']
+        python-version: ['3.8', '3.9', 'pypy-3.8']
     steps:
       - name: Check out code
         uses: actions/checkout@v2
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Update apt-get
-        run: sudo apt-get update
-
       - name: Install dependencies
         run: |
-          sudo apt install python3-pip
-          pip install -r requirements.txt
-          pip install tox
-
-      - name: Check for tox configuration
-        run: |
-          if [ ! -f tox.ini ]; then
-            echo "tox.ini file not found"
-            exit 1
-          fi
-          if ! grep -q '\[tox\]' tox.ini; then
-            echo "[tox] section not found in tox.ini"
-            exit 1
-          fi
+          python -m pip install --upgrade pip
+          pip install tox-gh-actions codecov
 
       - name: Run tests
         run: tox
+
+      - name: Upload coverage to Codecov
         env:
-          TOXENV: py
-        continue-on-error: true
-
-      - name: List files for debugging
-        if: failure()
-        run: ls -la
-
-      - name: Print tox.ini for debugging
-        if: failure() && -f tox.ini
-        run: cat tox.ini
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        run: |
+          VERSION="python_${{ matrix.python-version }}" &&
+          VERSION="${VERSION//[^[:alnum:]]/}" &&
+          codecov --token=${{ secrets.CODECOV_TOKEN }} --required --flags $VERSION --retry 5 --retry-delay 30
