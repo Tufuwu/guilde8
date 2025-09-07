@@ -1,46 +1,94 @@
-name: Python CI
+name: CI
 
 on:
   push:
     branches:
       - main
+    tags:
+      - '*'
   pull_request:
     branches:
       - main
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  build-linux:
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
-        python-version: ['3.8']
+        python-version: ['3.9']  # Updated Python version
+        arch: [x64, arm64]
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
-
+      - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-          fail-on-cache-miss: false
-
       - name: Install dependencies
-        run: CFLAGS="-O0" pip install . --upgrade
-
-      - name: List directory contents
-        run: ls -la
-
-      - name: Run tests
         run: |
-          chmod +x ./runtests.sh
-          ./runtests.sh
-        # Remove or update the working-directory line based on the actual location of runtests.sh
-        # working-directory: path/to/your/scripts
+          sudo apt-get update
+          sudo apt-get install -y build-essential libssl-dev libffi-dev python3-dev
+          python -m pip install --upgrade pip
+          pip install --upgrade pip pyinstaller wheel
+          pip install -r requirements.txt .
+      - name: Make bundle.sh executable
+        run: chmod +x pyinstaller/bundle.sh
+      - name: Run script
+        run: |
+          cd pyinstaller && ./bundle.sh
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Python 3.9
+        run: |
+          brew install openssl
+          brew install python@3.9  # Updated Python version
+          python3.9 -m pip install --upgrade pip
+      - name: Install dependencies
+        env:
+          LDFLAGS: "-L/usr/local/opt/openssl/lib"
+          CPPFLAGS: "-I/usr/local/opt/openssl/include"
+          PKG_CONFIG_PATH: "/usr/local/opt/openssl/lib/pkgconfig"
+        run: |
+          pip3 install --upgrade pip pyinstaller wheel
+          pip3 install -r requirements.txt .
+      - name: Make bundle.sh executable
+        run: chmod +x pyinstaller/bundle.sh
+      - name: Run script
+        run: |
+          cd pyinstaller && ./bundle.sh
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip pyinstaller wheel
+          pip install -r requirements.txt .
+      - name: Make bundle.sh executable
+        run: |
+          git update-index --chmod=+x pyinstaller/bundle.sh
+      - name: Run script
+        run: |
+          cd pyinstaller && ./bundle.sh
+
+  deploy:
+    runs-on: ubuntu-22.04
+    needs: [build-linux, build-macos, build-windows]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: deploy/*
+          asset_name: ${{ github.event.release.tag_name }}-assets
+          asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

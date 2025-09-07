@@ -1,9 +1,17 @@
-*.py[cod]
-build/
-dist/
-venv/
-*.egg-info/
+Session.vim
+/.venv
+/.coverage
+/etesync.db
 
-keys.py
+/dist
 
-.idea/
+/pyinstaller/etesync-dav.spec
+/pyinstaller/build
+/pyinstaller/dist
+/pyinstaller/.venv
+
+/old
+
+__pycache__
+*.egg-info
+.*.swp
