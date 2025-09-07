@@ -1,8 +1,10 @@
-[report]
-exclude_lines =
-    # need to re-specify the default pragma
-    pragma: no cover
+[run]
+branch = True
+source =
+    defusedxml/
+    tests.py
 
-    def __repr__
-    raise AssertionError
-    raise NotImplementedError
+[paths]
+source =
+   defusedxml/
+   .tox/py*/lib/python*/site-packages/defusedxml/

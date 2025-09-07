@@ -1,8 +1,9 @@
-include CHANGELOG.md
-include CONTRIBUTING.md
-include LICENSE
-include README.md
-include mysensors/VERSION
+include setup.py
+include README.txt CHANGES.txt LICENSE README.html
+include void.css
+include MANIFEST.in
+include setup.py Makefile
+include tests.py
+recursive-include xmltestdata *.xml
+recursive-include other *.php *.pl *.rb *.py *.txt
 
-recursive-exclude * __pycache__
-recursive-exclude * *.py[co]

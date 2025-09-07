@@ -1,54 +1,56 @@
-.PHONY: help black black-format build clean clean-build clean-pyc coverage lint release test-release test test-all
+PYTHON=python3
+SETUPFLAGS=
+COMPILEFLAGS=
+INSTALLFLAGS=
 
-help:
-	@echo "black - run black code formatter check"
-	@echo "black-format - run black code formatter format"
-	@echo "build - build a distribution"
-	@echo "clean - run all clean operations"
-	@echo "clean-build - remove build artifacts"
-	@echo "clean-pyc - remove Python file artifacts"
-	@echo "coverage - check code coverage with pytest-cov plugin"
-	@echo "lint - check style with flake8, pylint and pydocstyle"
-	@echo "release - package and upload a release to PyPI"
-	@echo "test-release - package and upload a release to test PyPI"
-	@echo "test - run tests quickly with the default Python"
-	@echo "test-all - run tests on every Python version with tox"
+.PHONY: inplace all rebuild test_inplace test fulltests clean distclean
+.PHONY: sdist install black
+
+all: inplace black README.html README.md
+
+README.md: README.txt CHANGES.txt
+	pandoc --from=rst --to=gfm README.txt > $@
+	pandoc --from=rst --to=gfm CHANGES.txt >> $@
+	sed -i ':a;N;$$!ba;s/\n\[!/[!/g' $@
+
+README.html: README.txt CHANGES.txt void.css
+	@echo | cat README.txt - CHANGES.txt | \
+	    rst2html --verbose --exit-status=1 --stylesheet=void.css \
+            > README.html
+
+inplace:
+	$(PYTHON) setup.py $(SETUPFLAGS) build_ext -i $(COMPILEFLAGS)
+
+rebuild: clean all
+
+test_inplace: inplace
+	$(PYTHON) -m tests
+
+test: test_inplace
 
 black:
-	black --check ./
+	black $(CURDIR) || true
 
-black-format:
-	black ./
+clean:
+	@find . \( -name '*.o' -or -name '*.so' -or -name '*.sl' -or \
+	           -name '*.py[cod]' -or -name README.html \) \
+	    -and -type f -delete
+	@rm -f .coverage .coverage.* coverage.xml
 
-build:
-	python setup.py sdist bdist_wheel
+distclean: clean
+	@rm -rf build
+	@rm -rf dist
+	@find . \( -name '~*' -or -name '*.orig' -or -name '*.bak' -or \
+	          -name 'core*' \) -and -type f  -delete
 
-clean: clean-build clean-pyc
+whitespace:
+	@find \( -name '*.rst' -or -name '*.py' -or -name '*.xml' \) | \
+	    xargs sed -i 's/[ \t]*$$//'
 
-clean-build:
-	rm -fr build/
-	rm -fr dist/
-	rm -fr *.egg-info
 
-clean-pyc:
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
+packages: README.html README.md
+	$(PYTHON) setup.py packages
 
-coverage:
-	pytest --cov-report term-missing --cov=mysensors tests/
-
-lint:
-	tox -e lint
-
-release: clean build
-	twine upload dist/*
-
-test-release: clean build
-	twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-
-test:
-	pytest tests/
-
-test-all:
-	tox
+install:
+	$(PYTHON) setup.py $(SETUPFLAGS) build $(COMPILEFLAGS)
+	$(PYTHON) setup.py install $(INSTALLFLAGS)
