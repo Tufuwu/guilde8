@@ -13,70 +13,100 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9"]
+        python-version: ['3.8', '3.9']
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install --no-deps -r requirements.txt
-      - name: Run tests
-        env:
-          PYTHONWARNINGS: "ignore::DeprecationWarning"
-        run: |
-          if [ -f "Makefile" ]; then
-            make ci
-          else
-            echo "Makefile not found, running default test command"
-            pytest --maxfail=1 --disable-warnings || exit 1
-          fi
+          pip install -r requirements.txt
+          pip install -r tests/requirements.txt
+          python setup.py -q install
+          pip install nose  # Ensure nose is installed
+          pip install wheel  # Ensure wheel is installed
 
-  test-pypy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up PyPy
-        uses: actions/setup-python@v2
+      - name: Run tests
+        run: nosetests --with-coverage --cover-package=btcde
+
+      - name: Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v3
         with:
-          python-version: "pypy-3.8"
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install termcolor==1.1.0 pytest==6.2.4 pytest-xdist==2.3.0
-      - name: Run tests
-        env:
-          PYTHONWARNINGS: "ignore::DeprecationWarning"
-        run: |
-          pytest --maxfail=1 --disable-warnings || exit 1
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true  # Ensure the job fails if Codecov upload fails
+          flags: unittests  # Add a flag to help identify the upload
+          verbose: true  # Enable verbose mode for more detailed logs
 
-  coverage:
+  test-release:
     runs-on: ubuntu-latest
     needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        python-version: ['3.8']
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.9
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          python-version: "3.9"
+          python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install --no-deps -r requirements.txt
-      - name: Run coverage
+          pip install -r requirements.txt
+          pip install -r tests/requirements.txt
+          python setup.py -q install
+          pip install wheel  # Ensure wheel is installed
+
+      - name: Deploy to Test PyPI
         env:
-          PYTHONWARNINGS: "ignore::DeprecationWarning"
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
         run: |
-          if [ -f "Makefile" ]; then
-            make coverage
-          else
-            echo "Makefile not found, running default coverage command"
-            pytest --cov=. --maxfail=1 --disable-warnings || exit 1
-          fi
-      - name: Upload coverage to Codecov
+          python -m pip install --upgrade twine
+          pip install wheel  # Ensure wheel is installed
+          python -m pip install --upgrade setuptools  # Ensure setuptools is installed
+          python setup.py sdist bdist_wheel
+          twine upload --repository-url https://test.pypi.org/legacy/ dist/* || exit 1  # Ensure the job fails if upload fails
+
+  release:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.ref, 'refs/tags/')
+    strategy:
+      matrix:
+        python-version: ['3.8']
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r tests/requirements.txt
+          python setup.py -q install
+          pip install wheel  # Ensure wheel is installed
+
+      - name: Deploy to PyPI
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: bash <(curl -s https://codecov.io/bash)
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m pip install --upgrade twine
+          pip install wheel  # Ensure wheel is installed
+          python -m pip install --upgrade setuptools  # Ensure setuptools is installed
+          python setup.py sdist bdist_wheel
+          twine upload dist/* || exit 1  # Ensure the job fails if upload fails
