@@ -1,4 +1,4 @@
-name: Python CI
+name: CI
 
 on:
   push:
@@ -9,13 +9,31 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ["3.8", "3.9"]
+        include:
+          - python-version: "3.8"
+            geos-version: "3.8.2"
+            numpy-version: "1.10.4"
+          - python-version: "3.8"
+            geos-version: "3.8.4"
+            numpy-version: "1.13.3"
+          - python-version: "3.8"
+            geos-version: "3.8.3"
+            numpy-version: "1.15.4"
+          - python-version: "3.8"
+            geos-version: "3.8.1"
+            numpy-version: "1.17.5"
+          - python-version: "3.9"
+            geos-version: "3.8.1"
+            numpy-version: "1.19.4"
+          - python-version: "3.8"
+            geos-version: "main"
     steps:
-      - name: Check out code
+      - name: Checkout code
         uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -23,31 +41,54 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Upgrade pip
-        run: pip install --upgrade pip
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      - name: Install system dependencies
-        run: sudo apt-get install -y build-essential libffi-dev
+      - name: Cache GEOS
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/geosinstall
+          key: ${{ runner.os }}-geos-${{ matrix.geos-version }}
+          restore-keys: |
+            ${{ runner.os }}-geos-
 
-      - name: Upgrade setuptools and wheel
-        run: pip install --upgrade setuptools wheel
+      - name: Install GEOS
+        run: |
+          chmod +x ./ci/install_geos.sh
+          export GEOS_INSTALL=${{ github.workspace }}/geosinstall/geos-${{ matrix.geos-version }}
+          export GEOS_VERSION=${{ matrix.geos-version }}
+          ./ci/install_geos.sh || exit 1
+        env:
+          GEOS_INSTALL: ${{ github.workspace }}/geosinstall/geos-${{ matrix.geos-version }}
+          GEOS_VERSION: ${{ matrix.geos-version }}
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install --disable-pip-version-check --upgrade pip
+          pip install --upgrade wheel
+          if [ "${{ matrix.geos-version }}" = "main" ]; then
+            pip install --upgrade --pre Cython numpy pytest;
+          else
+            pip install --upgrade Cython "numpy==${{ matrix.numpy-version }}" pytest;
+          fi
 
-      - name: Install test dependencies
-        run: pip install pytest
+      - name: Set environment variables
+        run: |
+          export LD_LIBRARY_PATH=${{ github.workspace }}/geosinstall/geos-${{ matrix.geos-version }}/lib
+          export PATH=${{ github.workspace }}/geosinstall/geos-${{ matrix.geos-version }}/bin:$PATH
 
-      - name: Install cffi with PEP 517
-        run: pip install cffi --use-pep517
+      - name: Build and install
+        run: |
+          python setup.py build_ext --inplace
+          pip install --no-deps -e .
 
       - name: Run tests
-        run: pytest --disable-warnings
+        run: pytest --doctest-modules
         env:
-          CFLAGS: "-O0"
-          CXXFLAGS: "-O0"
-          LDFLAGS: "-O0"
-          
-      - name: Install specific cffi version
-        run: pip install cffi==1.15.1
-
+          LD_LIBRARY_PATH: ${{ github.workspace }}/geosinstall/geos-${{ matrix.geos-version }}/lib
+          PATH: ${{ github.workspace }}/geosinstall/geos-${{ matrix.geos-version }}/bin:$PATH
