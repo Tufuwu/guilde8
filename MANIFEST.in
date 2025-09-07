@@ -1,4 +1,4 @@
-include README.rst
+include CHANGELOG.md
 include LICENSE
-include tox.ini
-recursive-include tests *.py
+include README.md
+graft tests
