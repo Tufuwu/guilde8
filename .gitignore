@@ -1,15 +1,18 @@
-.DS_Store
-._*
 *.pyc
-*.egg
-*.egg-info
+/build/*
+/dist/*
+/django_yubin.egg-info/
+/docs/_build
+.idea/*
+.vscode/
 .eggs/
-.tox/
-build/
-dist/
-docs/_build/
-local.py
+.DS_Store
+demo.*.sqlite
+demo/postgres
+demo/postgres-data
 
-# Because pipenv is only used to manage a local development
-# environment, it's not helpful to track its lock file
-Pipfile.lock
+# tests related
+.tox
+.coverage
+cover
+demo.sqlite
