@@ -13,43 +13,51 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9']
-        include:
-          - python-version: '3.8'
-            toxenv: tests
-          - python-version: '3.9'
-            toxenv: tests
-          - python-version: '3.9'
-            toxenv: mypy
-          - python-version: '3.9'
-            toxenv: apidocs
+        python-version: ['3.8']
+        version: ['19.3.8', '18.14.9']
+    env:
+      TOX_ENV: flake8
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: pip install tox codecov
-      - name: Run tests
-        run: tox -e ${{ matrix.toxenv }}
-      - name: Upload coverage to Codecov
-        if: always()
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: codecov --token=${{ secrets.CODECOV_TOKEN }}
 
-  build_docs:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
+      - name: Cache pip
+        uses: actions/cache@v3
         with:
-          python-version: '3.9'
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
-        run: pip install tox
-      - name: Build and push docs
-        run: ./.travis/build_docs.sh
+        run: |
+          pip install --upgrade pip setuptools
+          pip install flake8 flake8-print coveralls
+
+      - name: Run flake8
+        run: flake8
+
+      - name: Set up Docker
+        if: ${{ secrets.DOCKER_USERNAME }} && ${{ secrets.DOCKER_PASSWORD }}
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+          docker run -d -p 127.0.0.1:9000:9000 -p 127.0.0.1:8123:8123 --name test-clickhouse-server --ulimit nofile=262144:262144 yandex/clickhouse-server:${{ matrix.version }}
+          docker ps -a
+          sed -i 's/^host=localhost$/host=clickhouse-server/' setup.cfg
+          echo '127.0.0.1 clickhouse-server' | sudo tee /etc/hosts > /dev/null
+
+      - name: Run tests
+        run: coverage run --source=clickhouse_sqlalchemy setup.py test
+
+      - name: Coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: coveralls
