@@ -1,73 +1,40 @@
-# python-georss-ingv-centro-nazionale-terremoti-client
+[![GitHub Actions](https://github.com/flask-extensions/flask_simplelogin/workflows/Tests/badge.svg)](https://github.com/flask-extensions/flask_simplelogin/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/flask_simplelogin.svg?style=flat-square)](https://pypi.org/project/flask_simplelogin/)
+[![PyPI versions](https://img.shields.io/pypi/pyversions/flask_simplelogin.svg?style=flat-square)](https://pypi.org/project/flask_simplelogin/)
+[![PyPI formats](https://img.shields.io/pypi/format/flask_simplelogin.svg?style=flat-square)](https://pypi.org/project/flask_simplelogin/)
+[![Flask](https://img.shields.io/badge/Flask-Extension-blue.svg?style=flat-square)](https://github.com/pallets/flask)
+[![Documentation](https://readthedocs.org/projects/flask-simple-login/badge/?version=latest)](https://flask-simple-login.readthedocs.io/en/latest/?badge=latest)
 
-[![Build Status](https://github.com/exxamalte/python-georss-ingv-centro-nazionale-terremoti-client/workflows/CI/badge.svg?branch=master)](https://github.com/exxamalte/python-georss-ingv-centro-nazionale-terremoti-client/actions?workflow=CI)
-[![codecov](https://codecov.io/gh/exxamalte/python-georss-ingv-centro-nazionale-terremoti-client/branch/master/graph/badge.svg?token=PHASSFXFVU)](https://codecov.io/gh/exxamalte/python-georss-ingv-centro-nazionale-terremoti-client)
-[![PyPi](https://img.shields.io/pypi/v/georss-ingv-centro-nazionale-terremoti-client.svg)](https://pypi.python.org/pypi/georss-ingv-centro-nazionale-terremoti-client)
-[![Version](https://img.shields.io/pypi/pyversions/georss-ingv-centro-nazionale-terremoti-client.svg)](https://pypi.python.org/pypi/georss-ingv-centro-nazionale-terremoti-client)
+# Login Extension for Flask
 
-This library provides convenient access to the [INGV Centro Nazionale Terremoti (Earthquakes) Feed](http://cnt.rm.ingv.it/).
+The simplest way to add login to flask!
 
-## Installation
-`pip install georss-ingv-centro-nazionale-terremoti-client`
+## Top Contributors
 
-## Usage
-See below for an example of how this library can be used. After instantiating 
-the feed class and supplying the required parameters, you can call `update` to 
-retrieve the feed data. The return value will be a tuple of a status code and 
-the actual data in the form of a list of specific feed entries.
+[![](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/images/0)](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/links/0)[![](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/images/1)](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/links/1)[![](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/images/2)](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/links/2)[![](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/images/3)](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/links/3)[![](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/images/4)](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/links/4)[![](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/images/5)](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/links/5)[![](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/images/6)](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/links/6)[![](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/images/7)](https://sourcerer.io/fame/cuducos/cuducos/flask_simplelogin/links/7)
 
-**Status Codes**
-* _UPDATE_OK_: Update went fine and data was retrieved. The library may still return empty data, for example because no entries fulfilled the filter criteria.
-* _UPDATE_OK_NO_DATA_: Update went fine but no data was retrieved, for example because the server indicated that there was not update since the last request.
-* _UPDATE_ERROR_: Something went wrong during the update
+Add yourself, send a PR!
 
-**Supported Filters**
+## How it works
 
-| Filter            |                            | Description |
-|-------------------|----------------------------|-------------|
-| Radius            | `filter_radius`            | Radius in kilometers around the home coordinates in which events from feed are included. |
-| Minimum Magnitude | `filter_minimum_magnitude` | Minimum magnitude as float value. Only events with a magnitude equal or above this value are included. |
+First install it from [PyPI](https://pypi.org/project/flask_simplelogin/).
 
-**Example**
+> `pip install flask_simplelogin`
+
 ```python
-from georss_ingv_centro_nazionale_terremoti_client import \
-    IngvCentroNazionaleTerremotiFeed
-# Home Coordinates: Latitude: 40.84, Longitude: 14.25
-# Filter radius: 200 km
-# Filter minimum magnitude: 4.0
-feed = IngvCentroNazionaleTerremotiFeed((40.84, 14.25), 
-                                        filter_radius=200, 
-                                        filter_minimum_magnitude=4.0)
-status, entries = feed.update()
+from flask import Flask
+from flask_simplelogin import SimpleLogin
+
+app = Flask(__name__)
+SimpleLogin(app)
 ```
 
-## Feed Manager
+## **That's it!**
 
-The Feed Manager helps managing feed updates over time, by notifying the 
-consumer of the feed about new feed entries, updates and removed entries 
-compared to the last feed update.
+Now you have `/login` and `/logout` routes in your application.
 
-* If the current feed update is the first one, then all feed entries will be 
-  reported as new. The feed manager will keep track of all feed entries' 
-  external IDs that it has successfully processed.
-* If the current feed update is not the first one, then the feed manager will 
-  produce three sets:
-  * Feed entries that were not in the previous feed update but are in the 
-    current feed update will be reported as new.
-  * Feed entries that were in the previous feed update and are still in the 
-    current feed update will be reported as to be updated.
-  * Feed entries that were in the previous feed update but are not in the 
-    current feed update will be reported to be removed.
-* If the current update fails, then all feed entries processed in the previous
-  feed update will be reported to be removed.
+The username defaults to `admin` and the password defaults to `secret` (yeah that's not clever, let's see how to change it)
 
-After a successful update from the feed, the feed manager will provide two
-different dates:
+![Login Screen](/login_screen.png)
 
-* `last_update` will be the timestamp of the last successful update from the
-  feed. This date may be useful if the consumer of this library wants to
-  treat intermittent errors from feed updates differently.
-* `last_timestamp` will be the latest timestamp extracted from the feed data. 
-  This requires that the underlying feed data actually contains a suitable 
-  date. This date may be useful if the consumer of this library wants to 
-  process feed entries differently if they haven't actually been updated.
+Check the [documentation](https://flask-simple-login.readthedocs.io/en/latest/?badge=latest) for more details!

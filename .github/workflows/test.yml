@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9']
+        python-version: ["3.8", "3.9"]
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -25,17 +25,33 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install tox coveralls
+          pip install poetry
+          poetry install -v
+
+      - name: Update pyproject.toml for deprecated dev-dependencies
+        run: |
+          sed -i 's/\[tool.poetry.dev-dependencies\]/[tool.poetry.group.dev.dependencies]/' pyproject.toml
+
+      - name: Install specific version of typed_ast
+        run: |
+          poetry add typed-ast==1.4.3 --allow-prereleases
+
+      - name: Run flake8 on example/
+        run: poetry run flake8 example/
+
+      - name: Run flake8 on tests/
+        run: poetry run flake8 tests/
+
+      - name: Run Black
+        run: poetry run black --check .
 
       - name: Run tests
-        run: tox
         env:
-          TOXENV: py${{ matrix.python-version.split('.')[0] }}${{ matrix.python-version.split('.')[1] }}
-          PYTHON: ${{ matrix.python-version }}
+          PYTHONPATH: ""
+        run: poetry run pytest
 
-      - name: Upload coverage to Coveralls
-        if: ${{ matrix.python-version == '3.8' || matrix.python-version == '3.9' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: coveralls
+      - name: Fix undefined symbol error
+        if: ${{ matrix.python-version == '3.9' }}
+        run: |
+          pip uninstall -y typed-ast
+          pip install typed-ast==1.4.3
