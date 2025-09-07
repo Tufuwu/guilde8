@@ -1,64 +1,43 @@
+"""
+This file contains sample models to use in tests
+"""
 from django.db import models
+from django.db.models import QuerySet
+from django.db.models.manager import BaseManager
+from django_pg_returning import UpdateReturningModel
+
+from django_clickhouse.models import ClickHouseSyncModel, ClickHouseSyncQuerySet, ClickHouseSyncQuerySetMixin
 
 
-class FieldTest(models.Model):
-    date = models.DateField()
-    datetime = models.DateTimeField()
-    choice = models.CharField(max_length=1, choices=(("R", "Red"), ("G", "Green")), default="R")
-    empty_choice = models.CharField(max_length=1, choices=(("Y", "Yellow"), ("B", "Black")), blank=True)
-    integer_choice = models.IntegerField(choices=((0, "Zero"), (1, "One")), default=0)
-
-    @property
-    def my_property(self):
-        return "Foo"
+class NativeQuerySet(ClickHouseSyncQuerySetMixin, QuerySet):
+    pass
 
 
-# Many-to-one relationships
-class Manufacturer(models.Model):
-    name = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.name
+class TestQuerySet(ClickHouseSyncQuerySet):
+    pass
 
 
-class Car(models.Model):
-    name = models.CharField(max_length=50)
-    manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.name
+class TestManager(BaseManager.from_queryset(TestQuerySet)):
+    pass
 
 
-# Many-to-many relationships
-class Topping(models.Model):
-    name = models.CharField(max_length=50)
-    code = models.CharField(max_length=1)
-
-    def __str__(self):
-        return self.name
+class NativeManager(BaseManager.from_queryset(NativeQuerySet)):
+    pass
 
 
-class Pizza(models.Model):
-    name = models.CharField(max_length=50)
-    toppings = models.ManyToManyField(Topping)
+class TestModel(UpdateReturningModel, ClickHouseSyncModel):
+    objects = TestManager()
+    native_objects = NativeManager()
 
-    def __str__(self):
-        return self.name
-
-
-# One-to-one relationships
-class Place(models.Model):
-    name = models.CharField(max_length=50)
-    address = models.CharField(max_length=80)
-
-    def __str__(self):
-        return self.name
+    value = models.IntegerField()
+    created_date = models.DateField()
+    created = models.DateTimeField()
 
 
-class Restaurant(models.Model):
-    place = models.OneToOneField(Place, on_delete=models.CASCADE, primary_key=True)
-    serves_hot_dogs = models.BooleanField(default=False)
-    serves_pizza = models.BooleanField(default=False)
+class SecondaryTestModel(UpdateReturningModel, ClickHouseSyncModel):
+    objects = TestManager()
+    native_objects = NativeManager()
 
-    def __str__(self):
-        return self.place
+    value = models.IntegerField()
+    created_date = models.DateField()
+    created = models.DateTimeField()

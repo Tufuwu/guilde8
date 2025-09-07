@@ -13,66 +13,79 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', 'pypy-3.8']
-        toxenv:
-          - pre-commit
-          - py38-2.2
-          - pypy-3.8-2.2
-          - py38-3.0
-          - pypy-3.8-3.0
-          - py38-3.1
-          - pypy-3.8-3.1
-          - py39-3.2
-          - pypy-3.8-3.2
-          - py38-main
-          - py39-main
-          - pypy-3.8-main
-        exclude:
-          - python-version: '3.8'
-            toxenv: pre-commit
-          - python-version: '3.9'
-            toxenv: pre-commit
-          - python-version: 'pypy-3.8'
-            toxenv: pre-commit
-          - python-version: '3.9'
-            toxenv: py38-2.2
-          - python-version: '3.9'
-            toxenv: pypy-3.8-2.2
-          - python-version: '3.9'
-            toxenv: py38-3.0
-          - python-version: '3.9'
-            toxenv: pypy-3.8-3.0
-          - python-version: '3.9'
-            toxenv: py38-3.1
-          - python-version: '3.9'
-            toxenv: pypy-3.8-3.1
-          - python-version: '3.9'
-            toxenv: py39-3.2
-          - python-version: '3.9'
-            toxenv: pypy-3.8-3.2
-          - python-version: '3.9'
-            toxenv: py38-main
-          - python-version: '3.9'
-            toxenv: py39-main
-          - python-version: '3.9'
-            toxenv: pypy-3.8-main
+        python-version: ['3.8']
+        pg-version: ['9.6', '10', '11', '12']
+        django-version: ['2.1', '2.2', '3.0', '3.1']
+    env:
+      PG: ${{ matrix.pg-version }}
+      DJANGO: ${{ matrix.django-version }}
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-          check-latest: true
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-test.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install coverage tox
+          pip install -r requirements-test.txt
+          pip install -q Django==${{ matrix.django-version }}.*
+          python setup.py -q install
+
+      - name: Set up PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget ca-certificates
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-${{ matrix.pg-version }}
+          sudo systemctl stop postgresql
+          sudo systemctl start postgresql@${{ matrix.pg-version }}-main
+          sudo sed -i 's/#port = 5432/port = 5432/' /etc/postgresql/${{ matrix.pg-version }}/main/postgresql.conf
+          sudo cp /etc/postgresql/{10,${{ matrix.pg-version }}}/main/pg_hba.conf || true
+          sudo systemctl restart postgresql@${{ matrix.pg-version }}-main || true
+
+      - name: Set up ClickHouse
+        run: |
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4
+          sudo apt-get update
+          sudo apt-get install -y clickhouse-client clickhouse-server clickhouse-common-static
+          sudo service clickhouse-server restart
+
+      - name: Set up RabbitMQ
+        run: sudo apt-get install -y rabbitmq-server
+
+      - name: Set up Erlang
+        run: |
+          sudo apt-get install -y dirmngr apt-transport-https
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4
+          sudo apt-get update
+
+      - name: Prepare databases
+        run: |
+          sudo -u postgres psql -c 'CREATE ROLE test;'
+          sudo -u postgres psql -c 'ALTER ROLE test WITH SUPERUSER;'
+          sudo -u postgres psql -c 'ALTER ROLE test WITH LOGIN;'
+          sudo -u postgres psql -c "ALTER ROLE test PASSWORD 'test';"
+          sudo -u postgres psql -c 'CREATE DATABASE test OWNER test;'
+          sudo -u postgres psql -c 'CREATE DATABASE test2 OWNER test;'
+
+      - name: Output software versions
+        run: |
+          erl -eval 'erlang:display(erlang:system_info(otp_release)), halt().'  -noshell
+          rabbitmqctl status | grep "RabbitMQ"
+          clickhouse-client --query "SELECT version();"
+          psql -tc 'SHOW server_version' -U postgres
+
       - name: Run tests
-        env:
-          TOXENV: ${{ matrix.toxenv }}
-        run: tox
-      - name: Upload coverage to Coveralls
-        if: success()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: coveralls
+        run: python runtests.py
