@@ -1,6 +1,9 @@
-build
-build/*
-dist
-dist/*
-*.pyc
-zxing/java/
+*.py[cod]
+build/
+dist/
+venv/
+*.egg-info/
+
+keys.py
+
+.idea/
