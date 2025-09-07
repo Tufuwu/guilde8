@@ -1,51 +1,58 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+"""
+Django-MongoEngine
+------------------
 
-from setuptools import setup
+Django support for MongoDB using MongoEngine.
 
-import feedgen.version
+This is work-in-progress. Some things working, some don't. Fix what you need and make
+pull-request.
 
-packages = ['feedgen', 'feedgen/ext']
+Links
+`````
 
-setup(name='feedgen',
-      packages=packages,
-      version=feedgen.version.version_full_str,
-      description='Feed Generator (ATOM, RSS, Podcasts)',
-      author='Lars Kiesow',
-      author_email='lkiesow@uos.de',
-      url='https://lkiesow.github.io/python-feedgen',
-      keywords=['feed', 'ATOM', 'RSS', 'podcast'],
-      license='FreeBSD and LGPLv3+',
-      install_requires=['lxml', 'python-dateutil'],
-      classifiers=[
-        'Development Status :: 5 - Production/Stable',
+* `development version
+  <https://github.com/MongoEngine/django-mongoengine>`_
+
+"""
+from setuptools import setup, find_packages
+import sys
+import os
+
+
+__version__ = '0.4.6'
+__description__ = 'Django support for MongoDB via MongoEngine'
+__license__ = 'BSD'
+__author__ = 'Ross Lawley'
+__email__ = 'ross.lawley@gmail.com'
+
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+
+setup(
+    name='django-mongoengine',
+    version=__version__,
+    url='https://github.com/mongoengine/django-mongoengine',
+    download_url='https://github.com/mongoengine/django-mongoengine/tarball/master',
+    license=__license__,
+    author=__author__,
+    author_email=__email__,
+    description=__description__,
+    long_description=__doc__,
+    zip_safe=False,
+    platforms='any',
+    install_requires=["django>2.2,<3.3", "mongoengine>=0.14"],
+    packages=find_packages(exclude=('doc', 'docs',)),
+    include_package_data=True,
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Web Environment',
         'Intended Audience :: Developers',
-        'Intended Audience :: Information Technology',
-        'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
-        'License :: OSI Approved :: GNU Lesser General Public License v3 ' +
-        'or later (LGPLv3+)',
-        'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 3',
-        'Topic :: Communications',
-        'Topic :: Internet',
-        'Topic :: Text Processing',
-        'Topic :: Text Processing :: Markup',
-        'Topic :: Text Processing :: Markup :: XML'
-        ],
-      test_suite="tests",
-      long_description='''\
-Feedgenerator
-=============
-
-This module can be used to generate web feeds in both ATOM and RSS format. It
-has support for extensions. Included is for example an extension to produce
-Podcasts.
-
-It is licensed under the terms of both, the FreeBSD license and the LGPLv3+.
-Choose the one which is more convenient for you. For more details have a look
-at license.bsd and license.lgpl.
-''')
+        'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Framework :: Django'
+    ]
+)

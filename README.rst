@@ -1,184 +1,143 @@
-=============
-Feedgenerator
-=============
+==================
+Django-MongoEngine
+==================
 
-This module can be used to generate web feeds in both ATOM and RSS format. It
-has support for extensions. Included is for example an extension to produce
-Podcasts.
+|lifecycle| |gitter|
 
-It is licensed under the terms of both, the FreeBSD license and the LGPLv3+.
-Choose the one which is more convenient for you. For more details have a look
-at license.bsd and license.lgpl.
+.. |lifecycle| image:: https://img.shields.io/osslifecycle/MongoEngine/django-mongoengine
+   :alt: OSS Lifecycle
 
-More details about the project:
-
-- `Repository <https://github.com/lkiesow/python-feedgen>`_
-- `Documentation <https://lkiesow.github.io/python-feedgen/>`_
-- `Python Package Index <https://pypi.python.org/pypi/feedgen/>`_
+.. |gitter| image:: https://badges.gitter.im/gitterHQ/gitter.png
+   :target: https://gitter.im/MongoEngine/django-mongoengine
+   :alt: Gitter chat
 
 
-------------
-Installation
-------------
+THIS IS UNSTABLE PROJECT, IF YOU WANT TO USE IT - FIX WHAT YOU NEED
 
-**Prebuild packages**
+Right now we're targeting to get things working on Django 2.0 and 3.0;
 
-If your distribution includes this project as package, like Fedora Linux does,
-you can simply use your package manager to install the package. For example::
-
-    $ dnf install python3-feedgen
+WARNING:
+--------
+Maybe there is better option for mongo support, take a look at https://nesdis.github.io/djongo/;
+It's python3 only and i have not tried it yet, but looks promising.
 
 
-**Using pip**
-
-You can also use pip to install the feedgen module. Simply run::
-
-    $ pip install feedgen
-
-
--------------
-Create a Feed
--------------
-
-To create a feed simply instantiate the FeedGenerator class and insert some
-data:
-
-.. code-block:: python
-
-    from feedgen.feed import FeedGenerator
-    fg = FeedGenerator()
-    fg.id('http://lernfunk.de/media/654321')
-    fg.title('Some Testfeed')
-    fg.author( {'name':'John Doe','email':'john@example.de'} )
-    fg.link( href='http://example.com', rel='alternate' )
-    fg.logo('http://ex.com/logo.jpg')
-    fg.subtitle('This is a cool feed!')
-    fg.link( href='http://larskiesow.de/test.atom', rel='self' )
-    fg.language('en')
-
-Note that for the methods which set fields that can occur more than once in a
-feed you can use all of the following ways to provide data:
-
-- Provide the data for that element as keyword arguments
-- Provide the data for that element as dictionary
-- Provide a list of dictionaries with the data for several elements
-
-Example:
-
-.. code-block:: python
-
-    fg.contributor( name='John Doe', email='jdoe@example.com' )
-    fg.contributor({'name':'John Doe', 'email':'jdoe@example.com'})
-    fg.contributor([{'name':'John Doe', 'email':'jdoe@example.com'}, ...])
-
------------------
-Generate the Feed
------------------
-
-After that you can generate both RSS or ATOM by calling the respective method:
-
-.. code-block:: python
-
-    atomfeed = fg.atom_str(pretty=True) # Get the ATOM feed as string
-    rssfeed  = fg.rss_str(pretty=True) # Get the RSS feed as string
-    fg.atom_file('atom.xml') # Write the ATOM feed to a file
-    fg.rss_file('rss.xml') # Write the RSS feed to a file
-
-
-----------------
-Add Feed Entries
-----------------
-
-To add entries (items) to a feed you need to create new FeedEntry objects and
-append them to the list of entries in the FeedGenerator. The most convenient
-way to go is to use the FeedGenerator itself for the instantiation of the
-FeedEntry object:
-
-.. code-block:: python
-
-    fe = fg.add_entry()
-    fe.id('http://lernfunk.de/media/654321/1')
-    fe.title('The First Episode')
-    fe.link(href="http://lernfunk.de/feed")
-
-The FeedGenerator's method `add_entry(...)` will generate a new FeedEntry
-object, automatically append it to the feeds internal list of entries and
-return it, so that additional data can be added.
-
-----------
-Extensions
-----------
-
-The FeedGenerator supports extensions to include additional data into the XML
-structure of the feeds. Extensions can be loaded like this:
-
-.. code-block:: python
-
-    fg.load_extension('someext', atom=True, rss=True)
-
-This example would try to load the extension “someext” from the file
-`ext/someext.py`.  It is required that `someext.py` contains a class named
-“SomextExtension” which is required to have at least the two methods
-`extend_rss(...)` and `extend_atom(...)`. Although not required, it is strongly
-suggested to use `BaseExtension` from `ext/base.py` as superclass.
-
-`load_extension('someext', ...)` will also try to load a class named
-“SomextEntryExtension” for every entry of the feed. This class can be located
-either in the same file as SomextExtension or in `ext/someext_entry.py` which
-is suggested especially for large extensions.
-
-The parameters `atom` and `rss` control if the extension is used for ATOM and
-RSS feeds respectively. The default value for both parameters is `True`,
-meaning the extension is used for both kinds of feeds.
-
-**Example: Producing a Podcast**
-
-One extension already provided is the podcast extension. A podcast is an RSS
-feed with some additional elements for ITunes.
-
-To produce a podcast simply load the `podcast` extension:
-
-.. code-block:: python
-
-    from feedgen.feed import FeedGenerator
-    fg = FeedGenerator()
-    fg.load_extension('podcast')
-    ...
-    fg.podcast.itunes_category('Technology', 'Podcasting')
-    ...
-    fe = fg.add_entry()
-    fe.id('http://lernfunk.de/media/654321/1/file.mp3')
-    fe.title('The First Episode')
-    fe.description('Enjoy our first episode.')
-    fe.enclosure('http://lernfunk.de/media/654321/1/file.mp3', 0, 'audio/mpeg')
-    ...
-    fg.rss_str(pretty=True)
-    fg.rss_file('podcast.xml')
-
-If the FeedGenerator class is used to load an extension, it is automatically
-loaded for every feed entry as well.  You can, however, load an extension for a
-specific FeedEntry only by calling `load_extension(...)` on that entry.
-
-Even if extensions are loaded, they can be temporarily disabled during the feed
-generation by calling the generating method with the keyword argument
-`extensions` set to `False`.
-
-**Custom Extensions**
-
-If you want to load custom extensions which are not part of the feedgen
-package, you can use the method `register_extension` instead. You can directly
-pass the classes for the feed and the entry extension to this method meaning
-that you can define them everywhere.
-
-
----------------------
-Testing the Generator
+Working / Django 2.0-3.0
 ---------------------
 
-You can test the module by simply executing::
+* [ok] sessions
+* [ok] models/fields, fields needs testing
+* [ok] views
+* [ok] auth
+* [?] admin - partially working, some things broken
 
-    $ python -m feedgen
+Current status
+-------------------------------------------------------------------------------
 
-If you want to have a look at the code for this test to have a working code
-example for a whole feed generation process, you can find it in the
-`__main__.py <https://github.com/lkiesow/python-feedgen/blob/master/feedgen/__main__.py>`_.
+Many parts of projects rewritten/removed;
+Instead of copying django code i try to subclass/reuse/even monkey-patch;
+Everything listed above is working; admin - just base fuctions
+like changelist/edit, not tested with every form type; need's more work.
+
+Some code just plaholder to make things work;
+`django/forms/document_options.py` - dirty hack absolutely required to
+get thigs work with django. It replaces mongo _meta on model/class and
+provide django-like interface.
+It get's replaced after class creation via some metaclass magick.
+
+Fields notes
+------------
+
+* mongo defaults Field(required=False), changed to django-style defaults
+  -> Field(blank=False), and setting required = not blank in Field.__init__
+
+
+
+TODO
+----
+
+* Sync some files/docs that removed from mongoengine: https://github.com/seglberg/mongoengine/commit/a34f4c1beb93f430c37da20c8fd96ce02a0f20c1?diff=unified
+* Add docs for integrating: https://github.com/hmarr/django-debug-toolbar-mongo
+* Take a look at django-mongotools: https://github.com/wpjunior/django-mongotools
+
+Connecting
+==========
+
+In your **settings.py** file, add following lines::
+
+    MONGODB_DATABASES = {
+        "default": {
+            "name": database_name,
+            "host": database_host,
+            "password": database_password,
+            "username": database_user,
+            "tz_aware": True, # if you using timezones in django (USE_TZ = True)
+        },
+    }
+
+    INSTALLED_APPS += ["django_mongoengine"]
+
+Documents
+=========
+Inhherit your documents from ``django_mongoengine.Document``,
+and define fields using ``django_mongoengine.fields``.::
+
+    from django_mongoengine import Document, EmbeddedDocument, fields
+
+    class Comment(EmbeddedDocument):
+        created_at = fields.DateTimeField(
+            default=datetime.datetime.now, editable=False,
+        )
+        author = fields.StringField(verbose_name="Name", max_length=255)
+        email  = fields.EmailField(verbose_name="Email")
+        body = fields.StringField(verbose_name="Comment")
+
+    class Post(Document):
+        created_at = fields.DateTimeField(
+            default=datetime.datetime.now, editable=False,
+        )
+        title = fields.StringField(max_length=255)
+        slug = fields.StringField(max_length=255, primary_key=True)
+        comments = fields.ListField(
+            fields.EmbeddedDocumentField('Comment'), blank=True,
+        )
+
+
+Sessions
+========
+Django allows the use of different backend stores for its sessions. MongoEngine
+provides a MongoDB-based session backend for Django, which allows you to use
+sessions in your Django application with just MongoDB. To enable the MongoEngine
+session backend, ensure that your settings module has
+``'django.contrib.sessions.middleware.SessionMiddleware'`` in the
+``MIDDLEWARE_CLASSES`` field  and ``'django.contrib.sessions'`` in your
+``INSTALLED_APPS``. From there, all you need to do is add the following line
+into your settings module::
+
+    SESSION_ENGINE = 'django_mongoengine.sessions'
+    SESSION_SERIALIZER = 'django_mongoengine.sessions.BSONSerializer'
+
+Django provides session cookie, which expires after
+```SESSION_COOKIE_AGE``` seconds, but doesn't delete cookie at sessions
+backend, so ``'mongoengine.django.sessions'`` supports  `mongodb TTL <http://docs.mongodb.org/manual/tutorial/expire-data/>`_.
+
+.. note:: ``SESSION_SERIALIZER`` is only necessary in Django>1.6 as the default
+   serializer is based around JSON and doesn't know how to convert
+   ``bson.objectid.ObjectId`` instances to strings.
+
+
+How to run example app
+----------------------
+.. code::
+
+    poetry install
+    poetry run pip install -r example/tumblelog/requirements.txt
+    poetry run python example/tumblelog/manage.py runserver
+
+
+How to run tests
+----------------
+.. code::
+
+    poetry install
+    poetry run python -m pytest
