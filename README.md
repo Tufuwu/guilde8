@@ -1,231 +1,256 @@
-# linkedin-jobs-scraper
-> Scrape public available jobs on Linkedin using headless browser. 
-> For each job, the following fields are extracted: `job_id`, `link`, `apply_link`, `title`, `company`, `place`, `description`, 
-> `description_html`, `date`, `seniority_level`, `job_function`, `employment_type`, `industries`.
+# pymysensors [![Build Status][build-badge]][build]
 
-## Table of Contents
+Python API for talking to a [MySensors gateway](http://www.mysensors.org/). Currently supports serial protocol v1.4, v1.5, v2.0 - v2.2. Not all features of v2.x are implemented yet.
 
-<!-- toc -->
-
-* [Requirements](#requirements)
-* [Installation](#installation)
-* [Usage](#usage)
-* [Anonymous vs authenticated session](#anonymous-vs-authenticated-session)
-* [Rate limiting](#rate-limiting)
-* [Filters](#filters)
-* [Company filter](#company-filter)
-* [Logging](#logging)
-* [License](#license)
-
-<!-- toc stop -->
-
+- Supports smartsleep with serial API v2.x.
+- Supports the MQTT client gateway with serial API v2.x.
+- Supports OTA updates, for both [DualOptiboot](https://github.com/mysensors/DualOptiboot) and [MYSBootloader](https://github.com/mysensors/MySensorsBootloaderRF24) bootloaders.
+- All gateway instances, serial, tcp (ethernet) or mqtt will run in separate threads.
+- As an alternative to running the gateway in its own thread, there are experimental implementations of all gateways using asyncio.
 
 ## Requirements
-- [Chrome](https://www.google.com/intl/en_us/chrome/) or [Chromium](https://www.chromium.org/getting-involved/download-chromium)
-- [Chromedriver](https://chromedriver.chromium.org/)
-- Python >= 3.6
 
+pymysensors requires Python 3.5.3+.
 
 ## Installation
-Install package:
-```shell
-pip install linkedin-jobs-scraper
+
+You can easily install it from PyPI:
+
+```pip3 install pymysensors```
+
+## Usage
+
+Currently the API is best used by implementing a callback handler
+
+```py
+import mysensors.mysensors as mysensors
+
+def event(message):
+    """Callback for mysensors updates."""
+    print('sensor_update ' + str(message.node_id))
+
+GATEWAY = mysensors.SerialGateway('/dev/ttyACM0', event)
+GATEWAY.start()
 ```
 
+In the above example pymysensors will call "event" whenever a node in the Mysensors network has been updated. The message passed to the callback handler has the following data:
 
-## Usage 
-```python
-import logging
-from linkedin_jobs_scraper import LinkedinScraper
-from linkedin_jobs_scraper.events import Events, EventData
-from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
-from linkedin_jobs_scraper.filters import RelevanceFilters, TimeFilters, TypeFilters, ExperienceLevelFilters
-
-# Change root logger level (default is WARN)
-logging.basicConfig(level = logging.INFO)
-
-
-def on_data(data: EventData):
-    print('[ON_DATA]', data.title, data.company, data.date, data.link, len(data.description))
-
-
-def on_error(error):
-    print('[ON_ERROR]', error)
-
-
-def on_end():
-    print('[ON_END]')
-
-
-scraper = LinkedinScraper(
-    chrome_executable_path=None, # Custom Chrome executable path (e.g. /foo/bar/bin/chromedriver) 
-    chrome_options=None,  # Custom Chrome options here
-    headless=True,  # Overrides headless mode only if chrome_options is None
-    max_workers=1,  # How many threads will be spawned to run queries concurrently (one Chrome driver for each thread)
-    slow_mo=0.4,  # Slow down the scraper to avoid 'Too many requests (429)' errors
-)
-
-# Add event listeners
-scraper.on(Events.DATA, on_data)
-scraper.on(Events.ERROR, on_error)
-scraper.on(Events.END, on_end)
-
-queries = [
-    Query(
-        options=QueryOptions(
-            optimize=True,  # Blocks requests for resources like images and stylesheet
-            limit=27  # Limit the number of jobs to scrape
-        )
-    ),
-    Query(
-        query='Engineer',
-        options=QueryOptions(
-            locations=['United States'],
-            optimize=False,
-            limit=5,
-            filters=QueryFilters(
-                company_jobs_url='https://www.linkedin.com/jobs/search/?f_C=1441%2C17876832%2C791962%2C2374003%2C18950635%2C16140%2C10440912&geoId=92000000',  # Filter by companies
-                relevance=RelevanceFilters.RECENT,
-                time=TimeFilters.MONTH,
-                type=[TypeFilters.FULL_TIME, TypeFilters.INTERNSHIP],
-                experience=None,
-            )
-        )
-    ),
-]
-
-scraper.run(queries)
+```txt
+Message
+    gateway - the gateway instance
+    node_id - the sensor node identifier
+    child_id - the child sensor id
+    type - the message type, for example "set" or "presentation" (int)
+    ack - True is message was an ACK, false otherwise (0 or 1)
+    sub_type - the message sub_type (int)
+    payload - the payload of the message (string)
 ```
 
-## Anonymous vs authenticated session
-By default the scraper will run in anonymous mode (no authentication required). In some environments (e.g. AWS or Heroku) 
-this may be not possible though. You may face the following error message:
+_Note: The content of the sub_type differs according to the context. In presentation messages, the sub_type denotes S_TYPE data (such as S_INFO). In 'set' and 'req' messages the sub_type denotes V_TYPE data (such as V_TEXT)._
 
-```
-Scraper failed to run in anonymous mode, authentication may be necessary for this environment.
-```
+Symbolic names for the Message types and sub_types are defined in the protocol version-specific const_X.py files.
 
-In that case the only option available is to run using an authenticated session. These are the steps required:
-1. Login to LinkedIn using an account of your choice.
-2. Open Chrome developer tools:
+The data structure of a gateway and it's network is described below.
 
-![](https://github.com/spinlud/py-linkedin-jobs-scraper/raw/master/images/img3.png)
+```txt
+SerialGateway/TCPGateway/MQTTGateway
+    sensors - a dict containing all nodes for the gateway; node is of type Sensor
 
-3. Go to tab `Application`, then from left panel select `Storage` -> `Cookies` -> `https://www.linkedin.com`. In the
-main view locate row with name `li_at` and copy content from the column `Value`.
+Sensor - a sensor node
+    children - a dict containing all child sensors for the node
+    sensor_id - node id on the MySensors network
+    type - 17 for node or 18 for repeater
+    sketch_name
+    sketch_version
+    battery_level
+    protocol_version - the mysensors protocol version used by the node
 
-![](https://github.com/spinlud/py-linkedin-jobs-scraper/raw/master/images/img4.png)
-
-4. Set the environment variable `LI_AT_COOKIE` with the value obtained in step 3, then run your application as normal.
-Example:
-
-```shell script
-LI_AT_COOKIE=<your li_at cookie value here> python your_app.py
-```
-
-## Rate limiting
-You may experience the following rate limiting warning during execution: 
-```
-[429] Too many requests. You should probably increase scraper "slow_mo" value or reduce concurrency.
+ChildSensor - a child sensor
+    id - child id on the parent node
+    type - data type, S_HUM, S_TEMP etc.
+    description - the child description sent when presenting the child
+    values - a dictionary of values (V_HUM, V_TEMP, etc.)
 ```
 
-This means you are exceeding the number of requests per second allowed by the server (this is especially true when 
-using authenticated sessions where the rate limits are much more strict). You can overcome this by:
+Getting the type and values of node 23, child sensor 4 would be performed as follows:
 
-- Trying a higher value for `slow_mo` parameter (this will slow down scraper execution). 
-- Reducing the value of `max_workers` to limit concurrency. I recommend to use no more than one worker in authenticated
-  mode.
-
-## Filters
-It is possible to customize queries with the following filters:
-- RELEVANCE:
-    * `RELEVANT`
-    * `RECENT`
-- TIME:
-    * `DAY`
-    * `WEEK`
-    * `MONTH`
-    * `ANY`
-- TYPE:
-    * `FULL_TIME`
-    * `PART_TIME`
-    * `TEMPORARY`
-    * `CONTRACT`
-- EXPERIENCE LEVEL:
-    * `INTERNSHIP`
-    * `ENTRY_LEVEL`
-    * `ASSOCIATE`
-    * `MID_SENIOR`
-    * `DIRECTOR`
-    
-See the following example for more details:
-
-```python
-from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
-from linkedin_jobs_scraper.filters import RelevanceFilters, TimeFilters, TypeFilters, ExperienceLevelFilters
-
-
-query = Query(
-    query='Engineer',
-    options=QueryOptions(
-        locations=['United States'],
-        optimize=False,
-        limit=5,
-        filters=QueryFilters(            
-            relevance=RelevanceFilters.RECENT,
-            time=TimeFilters.MONTH,
-            type=[TypeFilters.FULL_TIME, TypeFilters.INTERNSHIP],
-            experience=[ExperienceLevelFilters.INTERNSHIP, ExperienceLevelFilters.MID_SENIOR],
-        )
-    )
-)
+```py
+s_type = GATEWAY.sensors[23].children[4].type
+values = GATEWAY.sensors[23].children[4].values
 ```
 
-### Company Filter
+Similarly, printing all the sketch names of the found nodes could look like this:
 
-It is also possible to filter by company using the public company jobs url on LinkedIn. To find this url you have to:
- 1. Login to LinkedIn using an account of your choice.
- 2. Go to the LinkedIn page of the company you are interested in (e.g. [https://www.linkedin.com/company/google](https://www.linkedin.com/company/google)).
- 3. Click on `jobs` from the left menu.
- 
- ![](https://github.com/spinlud/py-linkedin-jobs-scraper/raw/master/images/img1.png)
-
- 
- 4. Scroll down and locate `See all jobs` or `See jobs` button.
- 
- ![](https://github.com/spinlud/py-linkedin-jobs-scraper/raw/master/images/img2.png)
- 
- 5. Right click and copy link address (or navigate the link and copy it from the address bar).
- 6. Paste the link address in code as follows:
- 
-```python
-query = Query(    
-    options=QueryOptions(        
-        filters=QueryFilters(
-            # Paste link below
-            company_jobs_url='https://www.linkedin.com/jobs/search/?f_C=1441%2C17876832%2C791962%2C2374003%2C18950635%2C16140%2C10440912&geoId=92000000',        
-        )
-    )
-)
-```
-  
-## Logging
-Package logger can be retrieved using namespace `li:scraper`. Default level is `INFO`. 
-It is possible to change logger level using environment variable `LOG_LEVEL` or in code:
-
-```python
-import logging
-
-# Change root logger level (default is WARN)
-logging.basicConfig(level = logging.DEBUG)
-
-# Change package logger level
-logging.getLogger('li:scraper').setLevel(logging.DEBUG)
-
-# Optional: change level to other loggers
-logging.getLogger('urllib3').setLevel(logging.WARN)
-logging.getLogger('selenium').setLevel(logging.WARN)
+```py
+for node in GATEWAY.sensors.values():
+    print(node.sketch_name)
 ```
 
-## License
-[MIT License](http://en.wikipedia.org/wiki/MIT_License)
+Getting a child object inside the event function could be:
+
+```py
+    if GATEWAY.is_sensor(message.node_id, message.child_id):
+        child = GATEWAY.sensors[message.node_id].children[message.child_id]
+    else:
+        print("Child not available yet.")
+```
+
+To update a node child sensor value and send it to the node, use the set_child_value method in the Gateway class:
+
+```py
+# To set sensor 1 (int), child 1 (int), sub-type V_LIGHT (= 2) (int), with value 1.
+GATEWAY.set_child_value(1, 1, 2, 1)
+```
+
+### Persistence
+
+With persistence mode on, you can restart the gateway without
+having to restart each individual node in your sensor network. To enable persistence mode, the keyword argument `persistence`
+in the constructor should be True. A path to the config file
+can be specified as the keyword argument `persistence_file`. The file type (.pickle or .json) will set which persistence protocol to use, pickle or json. JSON files can be read using a normal text editor. Saving to the persistence file will be done on a schedule every 10 seconds if an update has been done since the last save. Make sure you start the persistence saving before starting the gateway.
+
+```py
+GATEWAY.start_persistence()
+```
+
+### Protocol version
+
+Set the keyword argument `protocol_version` to set which version of the MySensors serial API to use. The default value is `'1.4'`. Set the `protocol_version` to the version you're using.
+
+### Serial gateway
+
+The serial gateway also supports setting the baudrate, read timeout and reconnect timeout.
+
+```py
+import mysensors.mysensors as mysensors
+
+def event(message):
+    """Callback for mysensors updates."""
+    print("sensor_update " + str(message.node_id))
+
+GATEWAY = mysensors.SerialGateway(
+  '/dev/ttyACM0', baud=115200, timeout=1.0, reconnect_timeout=10.0,
+  event_callback=event, persistence=True,
+  persistence_file='somefolder/mysensors.pickle', protocol_version='2.2')
+GATEWAY.start_persistence() # optional, remove this line if you don't need persistence.
+GATEWAY.start()
+```
+
+There are two other gateway types supported besides the serial gateway: the tcp-ethernet gateway and the MQTT gateway.
+
+### TCP ethernet gateway
+
+The ethernet gateway is initialized similar to the serial gateway. The ethernet gateway supports setting the tcp host port, receive timeout and reconnect timeout, besides the common settings and the host ip address.
+
+```py
+GATEWAY = mysensors.TCPGateway(
+  '127.0.0.1', port=5003, timeout=1.0, reconnect_timeout=10.0,
+  event_callback=event, persistence=True,
+  persistence_file='somefolder/mysensors.pickle', protocol_version='1.4')
+```
+
+### MQTT gateway
+
+The MQTT gateway requires MySensors serial API v2.0 or greater and the MQTT client gateway example sketch loaded in the gateway device. The gateway also requires an MQTT broker and a python MQTT client interface to the broker. See [mqtt.py](https://github.com/theolind/pymysensors/blob/master/mqtt.py) for an example of how to implement this and initialize the MQTT gateway.
+
+### Over the air (OTA) firmware updates
+
+Call `Gateway` method `update_fw` to set one or more nodes for OTA
+firmware update. The method takes three positional arguments and one
+keyword arguement. The first argument should be the node id of the node to
+update. This can also be a list of many node ids. The next two arguments should
+be integers representing the firwmare type and version. The keyword argument is
+optional and should be a path to a hex file with the new firmware.
+
+```py
+GATEWAY.update_fw([1, 2], 1, 2, fw_path='/path/to/firmware.hex')
+```
+
+After the `update_fw` method has been called the node(s) will be requested
+to restart when pymysensors Gateway receives the next set message. After
+restart and during the MySensors `begin` method, the node will send a firmware
+config request. The pymysensors library will respond to the config request. If
+the node receives a proper firmware config response it will send a firmware
+request for a block of firmware. The pymysensors library will handle this and
+send a firmware response message. The latter request-response conversation will
+continue until all blocks of firmware are sent. If the CRC of the transmitted
+firmware match the CRC of the firmware config response, the node will restart
+and load the new firmware.
+
+### Gateway id
+
+The gateway method `get_gateway_id` will try to return a unique id for the
+gateway. This will be the serial number of the usb device for serial gateways,
+the mac address of the connected gateway for tcp gateways or the publish topic
+prefix (in_prefix) for mqtt gateways.
+
+### Connection callbacks
+
+It's possible to register two optional callbacks on the gateway that are called
+when the connection is made and when the connection is lost to the gateway
+device. Both callbacks should accept a gateway parameter, which is the gateway
+instance. The connection lost callback should also accept a second parameter
+for possible connection error exception argument. If connection was lost
+without error, eg when disconnecting, the error argument will be `None`.
+
+**NOTE:**
+The MQTT gateway doesn't support these callbacks since the connection to the
+MQTT broker is handled outside of pymysensors.
+
+```py
+def conn_made(gateway):
+  """React when the connection is made to the gateway device."""
+  pass
+
+GATEWAY.on_conn_made = conn_made
+
+def conn_lost(gateway, error):
+  """React when the connection is lost to the gateway device."""
+  pass
+
+GATEWAY.on_conn_lost = conn_lost
+```
+
+### Async gateway
+
+The serial, TCP and MQTT gateways now also have versions that support asyncio. Use the
+`AsyncSerialGateway` class, `AsyncTCPGateway` class or `AsyncMQTTGateway` class to make a gateway that
+uses asyncio. The following public methods are coroutines in the async gateway:
+
+- get_gateway_id
+- start_persistence
+- start
+- stop
+- update_fw
+
+See [async_main.py](https://github.com/theolind/pymysensors/blob/master/async_main.py) for an example of how to use this gateway.
+
+## Development
+
+Install the packages needed for development.
+
+```sh
+pip install -r requirements_dev.txt
+```
+
+Use the Makefile to run common development tasks.
+
+```sh
+make
+```
+
+### Code formatting
+
+We use black code formatter to automatically format the code.
+This requires Python 3.6 for development.
+
+```sh
+black ./
+```
+
+### Release
+
+See the [release instructions](RELEASE.md).
+
+[build-badge]: https://github.com/theolind/pymysensors/workflows/Test/badge.svg
+[build]: https://github.com/theolind/pymysensors/actions

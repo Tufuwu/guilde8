@@ -1,37 +1,53 @@
-from setuptools import setup
+"""Setup file for mysensors package."""
+from pathlib import Path
 
-with open('README.md', 'r') as fh:
-    long_description = fh.read()
+from setuptools import setup, find_packages
+
+PROJECT_DIR = Path(__file__).parent.resolve()
+VERSION = (PROJECT_DIR / "mysensors" / "VERSION").read_text().strip()
+
+README_FILE = PROJECT_DIR / "README.md"
+LONG_DESCR = README_FILE.read_text(encoding="utf-8")
+
+REQUIRES = [
+    "click",
+    "crcmod>=1.7",
+    "getmac",
+    "IntelHex>=2.2.1",
+    "pyserial>=3.4",
+    "pyserial-asyncio>=0.4",
+    "voluptuous>=0.11.1",
+]
+EXTRAS = {"mqtt-client": ["paho-mqtt"]}
+
 
 setup(
-    name='linkedin-jobs-scraper',
-    version='1.4.0',
-    author='Ludovico Fabbri',
-    author_email='ludovico.fabbri@gmail.com',
-    description='Scrape public available jobs on Linkedin using headless browser',
-    long_description=long_description,
-    long_description_content_type='text/markdown',
-    url='https://github.com/spinlud/py-linkedin-jobs-scraper.git',
-    packages=[
-        'linkedin_jobs_scraper',
-        'linkedin_jobs_scraper.chrome_cdp',
-        'linkedin_jobs_scraper.events',
-        'linkedin_jobs_scraper.exceptions',
-        'linkedin_jobs_scraper.filters',
-        'linkedin_jobs_scraper.query',
-        'linkedin_jobs_scraper.strategies',
-        'linkedin_jobs_scraper.utils',
-    ],
-    install_requires=[
-        'selenium',
-        'websocket-client'
-    ],
+    name="pymysensors",
+    version=VERSION,
+    description="Python API for talking to a MySensors gateway",
+    long_description=LONG_DESCR,
+    long_description_content_type="text/markdown",
+    url="https://github.com/theolind/pymysensors",
+    author="Theodor Lindquist",
+    author_email="theodor.lindquist@gmail.com",
+    license="MIT License",
+    install_requires=REQUIRES,
+    extras_require=EXTRAS,
+    packages=find_packages(exclude=["tests", "tests.*"]),
+    python_requires=">=3.5.3",
+    entry_points={"console_scripts": ["pymysensors = mysensors.cli:cli"]},
+    keywords=["sensor", "actuator", "IoT", "DYI"],
+    zip_safe=True,
     classifiers=[
-        'Intended Audience :: Developers',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 3.6',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: OS Independent',
+        "Intended Audience :: Developers",
+        "Intended Audience :: End Users/Desktop",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Topic :: Home Automation",
     ],
-    python_requires='>=3.6',
 )
