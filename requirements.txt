@@ -1,5 +1,3 @@
-pre-commit
+# pip dev/test dependencies
+flake8
 pytest
-pytest-cov
-tox
-tox-gh-actions
