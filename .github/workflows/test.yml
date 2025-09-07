@@ -1,4 +1,4 @@
-name: Python package
+name: Python CI
 
 on:
   push:
@@ -9,13 +9,13 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.8", "3.9"]
     steps:
-      - name: Check out repository
+      - name: Check out code
         uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -23,32 +23,17 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
-          pip install pyusb coverage coveralls pyserial PyYAML tqdm
+          python -m pip install --upgrade pip
+          pip install pipenv
+          pipenv install --dev
+          pip install six  # Add this line to ensure 'six' is installed
 
-      - name: Fix YAML Loader Issue
-        run: |
-          sed -i 's/yaml.load(/yaml.safe_load(/g' $(find . -name "*.py")
-          sed -i 's/safe_load(.*Loader=yaml.SafeLoader)/safe_load(/g' $(find . -name "*.py")
+      - name: Run lint
+        run: pipenv run lint
 
-      - name: Build
-        run: python setup.py build
-
-      - name: Test with coverage
-        run: |
-          python -m compileall .
-          coverage run --source=stcgal -m unittest discover
-
-      - name: Coveralls
+      - name: Run tests
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: coveralls
+          PYTHONPATH: .
+        run: pipenv run test

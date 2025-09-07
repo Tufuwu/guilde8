@@ -1,62 +1,82 @@
-[![Build Status](https://travis-ci.org/grigorig/stcgal.svg)](https://travis-ci.org/grigorig/stcgal)
-[![Coverage Status](https://coveralls.io/repos/github/grigorig/stcgal/badge.svg?branch=coveralls)](https://coveralls.io/github/grigorig/stcgal?branch=coveralls)
-[![PyPI version](https://badge.fury.io/py/stcgal.svg)](https://badge.fury.io/py/stcgal)
+# SoundCloud Add-on for [Kodi](https://github.com/xbmc/xbmc)
 
-stcgal - STC MCU ISP flash tool
-===============================
+<img align="right" src="https://github.com/xbmc/xbmc/raw/master/addons/webinterface.default/icon-128.png" alt="Kodi logo">
 
-stcgal is a command line flash programming tool for [STC MCU Ltd](http://stcmcu.com/).
-8051 compatible microcontrollers.
+[![GitHub tag (latest SemVer)](https://img.shields.io/github/tag/jaylinski/kodi-addon-soundcloud.svg)](https://github.com/jaylinski/kodi-addon-soundcloud/releases)
+[![Build Status](https://img.shields.io/github/workflow/status/jaylinski/kodi-addon-soundcloud/Continuous%20Integration/master.svg)](https://github.com/jaylinski/kodi-addon-soundcloud/actions)
+[![Link to Kodi forum](https://img.shields.io/badge/Kodi-Forum-informational.svg)](https://forum.kodi.tv/showthread.php?tid=206635)
+[![Link to Kodi wiki](https://img.shields.io/badge/Kodi-Wiki-informational.svg)](https://kodi.wiki/view/Add-on:SoundCloud)
+[![Link to Kodi releases](https://img.shields.io/badge/Kodi-v19%20%22Matrix%22-green.svg)](https://kodi.wiki/view/Releases)
+[![Link to Kodi releases](https://img.shields.io/badge/Kodi-v18%20%22Leia%22-green.svg)](https://kodi.wiki/view/Releases)
+[![Link to Kodi releases](https://img.shields.io/badge/Kodi-v17%20%22Krypton%22-green.svg)](https://kodi.wiki/view/Releases)
 
-STC microcontrollers have an UART/USB based boot strap loader (BSL). It
-utilizes a packet-based protocol to flash the code memory and IAP
-memory over a serial link. This is referred to as in-system programming
-(ISP).  The BSL is also used to configure various (fuse-like) device
-options. Unfortunately, this protocol is not publicly documented and
-STC only provide a (crude) Windows GUI application for programming.
+This [Kodi](https://github.com/xbmc/xbmc) Add-on provides a minimal interface for SoundCloud.
 
-stcgal is a full-featured Open Source replacement for STC's Windows
-software; it supports a wide range of MCUs, it is very portable and
-suitable for automation.
+## Features
 
-Features
---------
+* Search
+* Discover new music
+* Play tracks, albums and playlists
 
-* Support for STC 89/90/10/11/12/15/8 series
-* UART and USB BSL support
-* Display part info
-* Determine operating frequency
-* Program flash memory
-* Program IAP/EEPROM
-* Set device options
-* Read unique device ID (STC 10/11/12/15/8)
-* Trim RC oscillator frequency (STC 15/8)
-* Automatic power-cycling with DTR toggle or a custom shell command
-* Automatic UART protocol detection
+## Installation
 
-Quickstart
-----------
+### Kodi Repository
 
-Install stcgal (might need root/administrator privileges):
-    
-    pip3 install stcgal
+Follow the instructions on [https://kodi.wiki/view/Add-on:SoundCloud](https://kodi.wiki/view/Add-on:SoundCloud).
 
-Call stcgal and show usage:
+### Manual
 
-    stcgal -h
+* [Download the latest release](https://github.com/jaylinski/kodi-addon-soundcloud/releases) (`plugin.audio.soundcloud.zip`)
+* Copy the zip file to your Kodi system
+* Open Kodi, go to Add-ons and select "Install from zip file"
+* Select the file `plugin.audio.soundcloud.zip`
 
-Further information
--------------------
+## API
 
-[Installation](doc/INSTALL.md)
+Documentation of the **public** interface.
 
-[How to use stcgal](doc/USAGE.md)
+### plugin://plugin.audio.soundcloud/play/?[track_id|playlist_id|url]
 
-[Frequently Asked Questions](doc/FAQ.md)
+Examples:
 
-[List of tested MCU models](doc/MODELS.md)
+* `plugin://plugin.audio.soundcloud/play/?track_id=1`
+* `plugin://plugin.audio.soundcloud/play/?playlist_id=1`
+* `plugin://plugin.audio.soundcloud/play/?url=https%3A%2F%2Fsoundcloud.com%2Fpslwave%2Fallwithit`
 
-License
--------
+Legacy (will be removed in v5.0):
 
-stcgal is published under the MIT license.
+* `plugin://plugin.audio.soundcloud/play/?audio_id=1` Use `track_id=1` instead.
+
+## Development
+
+This add-on uses [Pipenv](https://pypi.org/project/pipenv/) to manage its dependencies.
+
+### Setup
+
+[Install Pipenv](https://pipenv.readthedocs.io/en/latest/install/#installing-pipenv) and run `pipenv install --dev`.
+
+### Build
+
+Run `pipenv run build`.
+
+### Lint
+
+Run `pipenv run lint`.
+
+### Test
+
+Run `pipenv run test`.
+
+## Roadmap
+
+* Re-implement all features from original add-on
+* Implement [enhancements](https://github.com/jaylinski/kodi-addon-soundcloud/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement)
+
+## Attributions
+
+This add-on is strongly inspired by the [original add-on](https://github.com/SLiX69/plugin.audio.soundcloud)
+developed by [bromix](https://kodi.tv/addon-author/bromix) and [SLiX](https://github.com/SLiX69).
+
+## Copyright and license
+
+This add-on is licensed under the MIT License - see `LICENSE.txt` for details.
