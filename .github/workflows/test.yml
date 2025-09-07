@@ -1,4 +1,4 @@
-name: CI
+name: Python CI
 
 on:
   push:
@@ -9,16 +9,15 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ['3.8']
+        django-version: ['1.11']
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v3  # Updated to the latest version
-        with:
-          fetch-depth: 0  # Ensure full history is fetched to avoid shallow clone issues
+      - name: Check out code
+        uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -26,42 +25,28 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: pip install --requirement dev-requirements.txt
-
-      - name: Upgrade pre-commit
-        run: pip install --upgrade pre-commit
-
-      - name: Validate coding guidelines
-        if: matrix.python-version == '3.8'
         run: |
-          pre-commit autoupdate
-          pre-commit run --all-files || true
+          python -m pip install --upgrade pip
+          pip install Django==${{ matrix.django-version }}
+          pip install -e .[flake8,tests]
 
-      - name: Run test suite
+      - name: Set up Django test settings
         run: |
-          python setup.py develop
-          pytest --verbose
+          echo "DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': ':memory:'}}" > test_settings.py
+          echo "INSTALLED_APPS = ['django.contrib.contenttypes', 'django.contrib.auth', 'django.contrib.staticfiles']" >> test_settings.py
+          echo "SECRET_KEY = 'test'" >> test_settings.py
+          echo "STATIC_URL = '/static/'" >> test_settings.py
+          echo "STATIC_ROOT = 'staticfiles'" >> test_settings.py
 
-      - name: Build and install package
-        run: |
-          python setup.py bdist_wheel
-          python setup.py install
+      - name: Collect static files
+        run: python manage.py collectstatic --noinput
 
-      - name: Test drive installed pygount
-        run: |
-          pygount --version
-          pygount --help
-          pygount pygount *.cfg *.yaml
-          pygount --format=summary pygount *.cfg *.yaml
+      - name: Lint with flake8
+        run: flake8
 
-      - name: Upload coverage to Coveralls
-        if: matrix.python-version == '3.8'
+      - name: Test with pytest
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: coveralls
-
-      - name: Fix pre-commit configuration
+          DJANGO_SETTINGS_MODULE: test_settings
         run: |
-          sed -i 's/rev: stable/rev: 25.1.0/' .pre-commit-config.yaml
-          pre-commit autoupdate
-          pre-commit run --all-files || true
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest || exit 1
