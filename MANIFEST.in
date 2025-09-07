@@ -1,20 +1,13 @@
-graft src
-graft tests
-graft docs
-graft demo
-prune docs/_build
-prune demo/mako_modules
-
+include .travis.yml
+include AUTHORS
+include COPYING
+include MANIFEST.in
 include README.rst
-include CHANGES.txt
-include LICENSE.txt
-include CONTRIBUTORS.txt
-include contributing.md
-include RELEASING.txt
-include TODO.txt
+include TODO.rst
+include requirements.txt
+include runtests.py
+include pyperformance
+include tox.ini
 
-include .coveragerc .flake8 setup.cfg pyproject.toml
-include tox.ini .travis.yml rtd.txt
-graft .github
-
-recursive-exclude * __pycache__ *.py[cod]
+include doc/*.rst doc/images/*.png doc/images/*.jpg
+include doc/conf.py doc/Makefile doc/make.bat

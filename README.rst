@@ -1,103 +1,27 @@
-pyramid_debugtoolbar
-====================
+##########################
+The Python Benchmark Suite
+##########################
 
-``pyramid_debugtoolbar`` provides a debug toolbar useful while you're
-developing your Pyramid application.
+.. image:: https://img.shields.io/pypi/v/pyperformance.svg
+   :alt: Latest pyperformance release on the Python Cheeseshop (PyPI)
+   :target: https://pypi.python.org/pypi/pyperformance
 
-Note that ``pyramid_debugtoolbar`` is a blatant rip-off of Michael van
-Tellingen's ``flask-debugtoolbar`` (which itself was derived from Rob Hudson's
-``django-debugtoolbar``). It also includes a lightly sanded down version of the
-Werkzeug debugger code by Armin Ronacher and team.
+.. image:: https://travis-ci.com/python/pyperformance.svg?branch=master
+   :alt: Build status of pyperformance on Travis CI
+   :target: https://travis-ci.com/github/python/pyperformance
 
+The ``pyperformance`` project is intended to be an authoritative source of
+benchmarks for all Python implementations. The focus is on real-world
+benchmarks, rather than synthetic benchmarks, using whole applications when
+possible.
 
-Documentation
--------------
+* `pyperformance documentation <http://pyperformance.readthedocs.io/>`_
+* `pyperformance GitHub project <https://github.com/python/pyperformance>`_
+  (source code, issues)
+* `Download pyperformance on PyPI <https://pypi.python.org/pypi/pyperformance>`_
 
-The documentation of the current stable release of ``pyramid_debugtoolbar`` is
-available at
-https://docs.pylonsproject.org/projects/pyramid-debugtoolbar/en/latest/.
+pyperformance is not tuned for PyPy yet: use the `PyPy benchmarks project
+<https://foss.heptapod.net/pypy/benchmarks>`_ instead to measure PyPy
+performances.
 
-
-Demonstration
--------------
-
-For a demonstration:
-
-- Clone the ``pyramid_debugtoolbar`` trunk.
-
-  .. code-block:: bash
-
-      $ git clone https://github.com/Pylons/pyramid_debugtoolbar.git
-
-- Create a virtual environment in the workspace.
-
-  .. code-block:: bash
-
-      $ cd pyramid_debugtoolbar
-      $ python3 -m venv env
-
-- Install the ``pyramid_debugtoolbar`` trunk into the virtualenv.
-
-  .. code-block:: bash
-
-      $ env/bin/pip install -e .
-
-- Install the ``pyramid_debugtoolbar/demo`` package into the virtualenv.
-
-  .. code-block:: bash
-
-      $ env/bin/pip install -e demo
-
-- Run the ``pyramid_debugtoolbar`` package's ``demo/demo.py`` file using the
-  virtual environment's Python.
-
-  .. code-block:: bash
-
-      $ env/bin/python demo/demo.py
-
-Visit http://localhost:8080 in a web browser to see a page full of test
-options.
-
-
-Testing
--------
-
-If you have ``tox`` installed, run all tests with:
-
-.. code-block:: bash
-
-    $ tox
-
-To run only a specific Python environment:
-
-.. code-block:: bash
-
-    $ tox -e py35
-
-If you don't have ``tox`` installed, you can install the testing requirements,
-then run the tests.
-
-.. code-block:: bash
-
-    $ python3 -m venv env
-    $ env/bin/pip install -e ".[testing]"
-    $ env/bin/nosetests
-
-
-Building documentation
-----------------------
-
-If you have ``tox`` installed, build the docs with:
-
-.. code-block:: bash
-
-    $ tox -e docs
-
-If you don't have ``tox`` installed, you can install the requirements to build
-the docs, then build them.
-
-.. code-block:: bash
-
-    $ env/bin/pip install -e ".[docs]"
-    $ cd docs
-    $ make clean html SPHINXBUILD=../env/bin/sphinx-build
+pyperformance is distributed under the MIT license.

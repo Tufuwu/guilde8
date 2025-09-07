@@ -1,4 +1,4 @@
-name: CI
+name: Python CI
 
 on:
   push:
@@ -13,40 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', 'pypy-3.8']
-        include:
-          - python-version: '3.8'
-            toxenv: py38-cover
-          - python-version: '3.8'
-            toxenv: coverage
-          - python-version: '3.8'
-            toxenv: docs
-          - python-version: '3.8'
-            toxenv: py38-pyramid14
-          - python-version: '3.8'
-            toxenv: py38-pyramid19
+        python-version: ['3.8', '3.9', '3.10', 'pypy-3.8']
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out repository
+        uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools
-          pip install tox
-      - name: Run tests
-        run: |
-          if [ -z "${{ matrix.toxenv }}" ]; then
-            TOXENV=py${{ matrix.python-version }}
-          else
-            TOXENV=${{ matrix.toxenv }}
-          fi
-          tox -e $TOXENV
 
-  cache:
-    runs-on: ubuntu-latest
-    steps:
       - name: Cache pip
         uses: actions/cache@v3
         with:
@@ -54,3 +30,18 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install -U 'setuptools>=18.5' 'pip>=6.0' 'wheel'
+          pip install -e .
+        env:
+          CFLAGS: "-Wno-narrowing"
+
+      - name: Install specific greenlet version
+        run: pip install greenlet==1.1.0
+        # Add a condition to skip this step for Python 3.10
+        if: matrix.python-version != '3.10'
+
+      - name: Run tests
+        run: python runtests.py

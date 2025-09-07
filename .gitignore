@@ -1,16 +1,19 @@
-*.egg
-*.egg-info
+# Python cached bytecode files
 *.pyc
-*$py.class
-*.pt.py
-*.txt.py
+*.pyo
+*.pyd
+
+# Temporary files, usually created by text editors (vim)
+*.swp
 *~
-.*.swp
-.coverage
-.coverage.*
+
+# Created by setup.py sdist
 build/
 dist/
+pyperformance.egg-info/
+
+# Created by the pyperformance script
+venv/
+
+# Created by the tox program
 .tox/
-nosetests*.xml
-coverage*.xml
-env*/

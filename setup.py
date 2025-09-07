@@ -1,89 +1,116 @@
-##############################################################################
+#!/usr/bin/env python3
+
+# FIXME:
 #
-# Copyright (c) 2008-2013 Agendaless Consulting and Contributors.
-# All Rights Reserved.
+# - REENABLE HG_STARTUP BENCHMARK.
 #
-# This software is subject to the provisions of the BSD-like license at
-# http://www.repoze.org/LICENSE.txt.  A copy of the license should accompany
-# this distribution.  THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL
-# EXPRESS OR IMPLIED WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO,
-# THE IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND
-# FITNESS FOR A PARTICULAR PURPOSE
+# Update dependencies:
 #
-##############################################################################
+#  - python3 -m pip install --user --upgrade pip-tools
+#  - git clean -fdx  # remove all untracked files!
+#  - (cd pyperformance; pip-compile --upgrade requirements.in)
+#
+# Prepare a release:
+#
+#  - git pull --rebase
+#  - Remove untracked files/dirs: git clean -fdx
+#  - maybe update version in pyperformance/__init__.py and doc/conf.py
+#  - set release date in doc/changelog.rst
+#  - git commit -a -m "prepare release x.y"
+#  - run tests: tox --parallel auto
+#  - git push
+#  - check Travis CI status:
+#    https://travis-ci.com/github/python/pyperformance
+#  - check AppVeyor status:
+#    https://ci.appveyor.com/project/lazka/pyperformance-rdqv8
+#
+# Release a new version:
+#
+#  - git tag VERSION
+#  - git push --tags
+#  - Remove untracked files/dirs: git clean -fdx
+#  - python3 setup.py sdist bdist_wheel
+#  - twine upload dist/*
+#
+# After the release:
+#
+#  - set version to n+1: pyperformance/__init__.py and doc/conf.py
+#  - git commit -a -m "post-release"
+#  - git push
 
-from setuptools import find_packages, setup
+# Import just to get the version
+import pyperformance
 
+VERSION = pyperformance.__version__
 
-def readfile(name):
-    with open(name) as f:
-        return f.read()
-
-
-README = readfile("README.rst")
-CHANGES = readfile("CHANGES.txt")
-
-install_requires = [
-    "pyramid>=1.4",
-    "pyramid_mako>=0.3.1",  # lazy configuration loading works
-    "repoze.lru",
-    "Pygments",
+DESCRIPTION = 'Python benchmark suite'
+CLASSIFIERS = [
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: MIT License',
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python',
 ]
 
-extra_requires = [
-    "ipaddress",
-]
 
-testing_extras = [
-    "WebTest",
-    "nose",
-    "coverage",
-]
+# put most of the code inside main() to be able to import setup.py in
+# unit tests
+def main():
+    import io
+    import os.path
+    from setuptools import setup
 
-docs_extras = [
-    "Sphinx >= 1.7.5",
-    "pylons-sphinx-themes >= 0.3",
-]
+    with io.open('README.rst', encoding="utf8") as fp:
+        long_description = fp.read().strip()
 
-setup(
-    name="pyramid_debugtoolbar",
-    version="4.6.1",
-    description=(
-        "A package which provides an interactive HTML debugger "
-        "for Pyramid application development"
-    ),
-    long_description=README + "\n\n" + CHANGES,
-    classifiers=[
-        "Intended Audience :: Developers",
-        "Programming Language :: Python",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
-        "Framework :: Pyramid",
-        "Topic :: Internet :: WWW/HTTP :: WSGI",
-        "License :: Repoze Public License",
-    ],
-    keywords="wsgi pylons pyramid transaction",
-    author=(
-        "Chris McDonough, Michael Merickel, Casey Duncan, " "Blaise Laflamme"
-    ),
-    author_email="pylons-discuss@googlegroups.com",
-    url="https://docs.pylonsproject.org/projects/pyramid-debugtoolbar/en/latest/",  # noqa E501
-    license="BSD",
-    packages=find_packages("src", exclude=["tests"]),
-    package_dir={"": "src"},
-    include_package_data=True,
-    zip_safe=False,
-    install_requires=install_requires,
-    python_requires=">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*",
-    extras_require={
-        ':python_version<"3.3"': extra_requires,
-        "testing": testing_extras,
-        "docs": docs_extras,
-    },
-    test_suite="tests",
-)
+    packages = [
+        'pyperformance',
+        'pyperformance.benchmarks',
+        'pyperformance.benchmarks.data',
+        'pyperformance.benchmarks.data.2to3',
+        'pyperformance.tests',
+        'pyperformance.tests.data',
+    ]
+
+    data = {
+        'pyperformance': ['requirements.txt'],
+        'pyperformance.tests': ['data/*.json'],
+    }
+
+    # Search for all files in pyperformance/benchmarks/data/
+    data_dir = os.path.join('pyperformance', 'benchmarks', 'data')
+    benchmarks_data = []
+    for root, dirnames, filenames in os.walk(data_dir):
+        # Strip pyperformance/benchmarks/ prefix
+        root = os.path.normpath(root)
+        root = root.split(os.path.sep)
+        root = os.path.sep.join(root[2:])
+
+        for filename in filenames:
+            filename = os.path.join(root, filename)
+            benchmarks_data.append(filename)
+    data['pyperformance.benchmarks'] = benchmarks_data
+
+    options = {
+        'name': 'pyperformance',
+        'version': VERSION,
+        'author': 'Collin Winter and Jeffrey Yasskin',
+        'license': 'MIT license',
+        'description': DESCRIPTION,
+        'long_description': long_description,
+        'url': 'https://github.com/python/benchmarks',
+        'classifiers': CLASSIFIERS,
+        'packages': packages,
+        'package_data': data,
+        'entry_points': {
+            'console_scripts': ['pyperformance=pyperformance.cli:main']
+        },
+        'install_requires': ["pyperf"],
+    }
+    setup(**options)
+
+
+if __name__ == '__main__':
+    main()
