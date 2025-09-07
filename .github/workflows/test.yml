@@ -1,4 +1,4 @@
-name: Python CI
+name: CI
 
 on:
   push:
@@ -9,39 +9,36 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', 'pypy-3.8']
+        python-version: ['3.8']
+
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+    - name: Install dependencies
+      run: sudo apt-get update && sudo apt-get install -y make
 
-      - name: Install dependencies
-        run: |
-          pip install -U 'setuptools>=18.5' 'pip>=6.0' 'wheel'
-          pip install -e .
-        env:
-          CFLAGS: "-Wno-narrowing"
+    - name: Make install_radare2.sh executable
+      run: chmod +x ./scripts/install_radare2.sh
 
-      - name: Install specific greenlet version
-        run: pip install greenlet==1.1.0
-        # Add a condition to skip this step for Python 3.10
-        if: matrix.python-version != '3.10'
+    - name: Install project dependencies
+      run: |
+        ./scripts/install_radare2.sh
+        pip install -r python/requirements_ci.txt
+        cd python && chmod +x setup.py && ./setup.py install
 
-      - name: Run tests
-        run: python runtests.py
+    - name: Run tests
+      run: |
+        cd python/test && make tests
+      env:
+        PYTHONPATH: ${{ github.workspace }}/python
+        PATH: ${{ github.workspace }}/scripts:${{ env.PATH }}
