@@ -1,89 +1,83 @@
-.PHONY: build dist docs
-VERSION=`python3 setup.py -V`
+OK_COLOR := $(shell tput -Txterm setaf 2)
+NO_COLOR := $(shell tput -Txterm sgr0)
 
-WHL_FILES := $(wildcard dist/*.whl)
-WHL_ASC := $(WHL_FILES:=.asc)
-DIST_FILE := $(wildcard dist/*.tar.gz)
-DIST_ASC := $(DIST_FILE:=.asc)
+.PHONY: build
 
-build:
-	python3 setup.py build
+name='yaspin'
 
-install: dist
-	pip3 -V
-	pip3 install --no-cache-dir --no-deps --upgrade --force-reinstall --find-links ./dist/django-cas-server-${VERSION}.tar.gz django-cas-server
+# Use $$ if running awk inside make
+# https://lists.freebsd.org/pipermail/freebsd-questions/2012-September/244810.html
+version := $(shell poetry version | awk '{ print $$2 }')
+pypi_usr := $(shell grep username ~/.pypirc | awk -F"= " '{ print $$2 }')
+pypi_pwd := $(shell grep password ~/.pypirc | awk -F"= " '{ print $$2 }')
 
-uninstall:
-	pip3 uninstall django-cas-server || true
+flake:
+	@echo "$(OK_COLOR)==> Linting code ...$(NO_COLOR)"
+	@poetry run flake8 --ignore=F821,E501,W503 .
 
-clean_pyc:
-	find ./ -name '*.pyc' -delete
-	find ./ -name __pycache__ -delete
-clean_build:
-	rm -rf build django_cas_server.egg-info dist
-clean_tox:
-	rm -rf .tox tox_logs
-clean_test_venv:
-	rm -rf test_venv
-clean_coverage:
-	rm -rf coverage.xml .coverage htmlcov
-clean_tild_backup:
-	find ./ -name '*~' -delete
-clean_docs:
-	rm -rf docs/_build/ docs/django.inv
-clean_eggs:
-	rm -rf .eggs/
+lint:
+	@echo "$(OK_COLOR)==> Linting code ...$(NO_COLOR)"
+	@poetry run pylint $(name)/ ./tests -rn -f colorized
 
-clean: clean_pyc clean_build clean_coverage clean_tild_backup
+isort:
+	@poetry run isort --atomic --verbose --only-modified --line-length=88 $(name)/ tests/ examples/
 
-clean_all: clean clean_tox clean_test_venv clean_docs clean_eggs
+fmt: isort
+	@poetry run black ./$(name) ./tests ./examples
 
-dist:
-	python3 setup.py sdist
-	python3 setup.py bdist_wheel
+check-fmt:
+	@poetry run isort --check --line-length=88 $(name)/ tests/ examples/
+	@poetry run black --check ./$(name) ./tests ./examples
 
-test_venv/bin/python:
-	python3 -m venv test_venv
-	test_venv/bin/pip install -U --requirement requirements-dev.txt 'Django>=3.2,<3.3'
+spellcheck:
+	@cspell -c .cspell.json $(name)/*.py tests/*.py examples/*.py README.rst HISTORY.rst pyproject.toml Makefile
 
-test_venv/cas/manage.py: test_venv
-	mkdir -p test_venv/cas
-	test_venv/bin/django-admin startproject cas test_venv/cas
-	ln -s ../../cas_server test_venv/cas/cas_server
-	sed -i "s/'django.contrib.staticfiles',/'django.contrib.staticfiles',\n    'cas_server',/" test_venv/cas/cas/settings.py
-	sed -i "s/'django.middleware.clickjacking.XFrameOptionsMiddleware',/'django.middleware.clickjacking.XFrameOptionsMiddleware',\n    'django.middleware.locale.LocaleMiddleware',/" test_venv/cas/cas/settings.py
-	sed -i 's/from django.conf.urls import url/from django.conf.urls import url, include/' test_venv/cas/cas/urls.py
-	sed -i "s@url(r'^admin/', admin.site.urls),@url(r'^admin/', admin.site.urls),\n    url(r'^', include('cas_server.urls', namespace='cas_server')),@" test_venv/cas/cas/urls.py
-	test_venv/bin/python test_venv/cas/manage.py migrate
-	test_venv/bin/python test_venv/cas/manage.py createsuperuser
+clean:
+	@echo "$(OK_COLOR)==> Cleaning up files that are already in .gitignore...$(NO_COLOR)"
+	@for pattern in `cat .gitignore`; do find . -name "*/$$pattern" -delete; done
 
-test_venv: test_venv/bin/python
+clean-pyc:
+	@echo "$(OK_COLOR)==> Cleaning bytecode ...$(NO_COLOR)"
+	@find . -type d -name '__pycache__' -exec rm -rf {} +
+	@find . -name '*.pyc' -exec rm -f {} +
+	@find . -name '*.pyo' -exec rm -f {} +
+	@find . -name '*~' -exec rm -f {} +
 
-test_project: test_venv/cas/manage.py
-	@echo "##############################################################"
-	@echo "A test django project was created in $(realpath test_venv/cas)"
+test: clean-pyc flake
+	@echo "$(OK_COLOR)==> Runnings tests ...$(NO_COLOR)"
+	@poetry run py.test -n auto -v
 
-run_server: test_project
-	test_venv/bin/python test_venv/cas/manage.py runserver
+coverage: clean-pyc
+	@echo "$(OK_COLOR)==> Calculating coverage...$(NO_COLOR)"
+	@poetry run py.test --cov-report=term --cov-report=html --cov-report=xml --cov $(name) tests/
+	@echo "open file://`pwd`/htmlcov/index.html"
 
-run_tests: test_venv
-	python3 setup.py check --restructuredtext --stric
-	test_venv/bin/py.test -rw -x --cov=cas_server --cov-report html --cov-report term
-	rm htmlcov/coverage_html.js  # I am really pissed off by those keybord shortcuts
+rm-build:
+	@rm -rf build dist .egg $(name).egg-info
 
-test_venv/bin/sphinx-build: test_venv
-	test_venv/bin/pip install Sphinx sphinx_rtd_theme
+check-rst:
+	@echo "$(OK_COLOR)==> Checking RST will render...$(NO_COLOR)"
+	@twine check dist/*
 
-docs: test_venv/bin/sphinx-build
-	bash -c "source test_venv/bin/activate; cd docs; make html"
+build: rm-build
+	@echo "$(OK_COLOR)==> Building...$(NO_COLOR)"
+	@poetry build
 
-sign_release: $(WHL_ASC) $(DIST_ASC)
+publish: flake build check-rst
+	@echo "$(OK_COLOR)==> Publishing...$(NO_COLOR)"
+	@poetry publish -u $(pypi_usr) -p $(pypi_pwd)
 
-dist/%.asc:
-	gpg --detach-sign -a $(@:.asc=)
+tag:
+	@echo "$(OK_COLOR)==> Creating tag $(version) ...$(NO_COLOR)"
+	@git tag -a "v$(version)" -m "Version $(version)"
+	@echo "$(OK_COLOR)==> Pushing tag $(version) to origin ...$(NO_COLOR)"
+	@git push origin "v$(version)"
 
-test_venv/bin/twine: test_venv
-	test_venv/bin/pip install twine
+bump:
+	@poetry version patch
 
-publish_pypi_release: test_venv test_venv/bin/twine dist sign_release
-	test_venv/bin/twine upload --sign dist/*
+bump-minor:
+	@poetry version minor
+
+export-requirements:
+	@poetry export -f requirements.txt --dev > requirements.txt
