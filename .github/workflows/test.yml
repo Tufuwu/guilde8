@@ -1,4 +1,4 @@
-name: CI
+name: Python CI
 
 on:
   push:
@@ -9,36 +9,43 @@ on:
       - main
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ['3.8']
-        django-version: ['2.2', '3.0', 'main']
-        include:
-          - python-version: '3.8'
-            toxenv: docs
-          - python-version: '3.8'
-            toxenv: quality
+        python-version: ["3.8", "3.9"]
+        with-opt-deps: [false, true]
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install tox tox-gh-actions
+          pip install -r requirements.txt pytest
+          if [ "${{ matrix.with-opt-deps }}" = "true" ]; then
+            pip install cryptography feedparser
+          fi
+          git clone https://github.com/ProgVal/irctest.git
+          echo "y" | pip uninstall limnoria || true
+
+      - name: Install package
+        run: python setup.py install
+
+      - name: Configure Python environment
+        run: |
+          python -c "import sys; sys.set_int_max_str_digits(20000)"
+
       - name: Run tests
         env:
-          TOXENV: ${{ matrix.toxenv || 'py' }}
-          DJANGO: ${{ matrix.django-version }}
+          PYTHONINTMAXSTRDIGITS: 20000
         run: |
-          if [ "${{ matrix.toxenv }}" == "quality" ]; then
-            python -m pip install --upgrade pip
-            pip install flake8
-            flake8 .
-          else
-            tox
+          supybot-test test -v --plugins-dir=./plugins/ --no-network
+          if [ "${{ matrix.with-opt-deps }}" = "true" ] && [[ "${{ matrix.python-version }}" =~ ^3\.[4-9] ]]; then
+            cd irctest
+            pytest --controllers irctest.controllers.limnoria
+    continue-on-error: ${{ matrix.with-opt-deps == true }}

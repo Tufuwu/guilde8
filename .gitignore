@@ -1,31 +1,37 @@
-*.py[cod]
-.cache
-.ropeproject
-*.sublime-*
-.python-version
+*.mo
+*.py[cdo]
+*~
+.*.swp
+.swp
+MANIFEST
+backup/
+build/
+debian/compat
+debian/files
+debian/limnoria*
+debian/python-module-stampdir/
+dist/
+docs/_build/
+docs/plugins/
+limnoria.egg-info/
+merge.sh
+nano.save
+push.sh
+py3k/
+src/version.py
+supybot.egg-info/
+test-conf/
+test-data/
+test-logs/
+src/version.py
+INSTALL
+README.txt
+conf/
+data/
+logs/
+*.conf
+*.conf.bak
 
-# Packages
-*.egg
-*.egg-info
-dist
-build
-eggs
-parts
-bin
-var
-sdist
-develop-eggs
-.installed.cfg
-
-# Installer logs
-pip-log.txt
-
-# Unit test / coverage reports
-.coverage
-.tox
-
-# Sphinx
-docs/_build
-
-# Django
-*.sqlite3
+# Intellij PyCharm / IDEA related files
+*.iml
+.idea
