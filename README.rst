@@ -1,108 +1,196 @@
-.. image:: https://raw.githubusercontent.com/jschneier/django-storages/master/docs/logos/horizontal.png
-    :alt: Django-Storages
-    :width: 100%
+pygelf
+======
 
-.. image:: https://img.shields.io/pypi/v/django-storages.svg
-    :target: https://pypi.org/project/django-storages/
-    :alt: PyPI Version
+.. image:: https://github.com/keeprocking/pygelf/actions/workflows/tests.yml/badge.svg?branch=master
+   :target: https://github.com/keeprocking/pygelf/actions
+.. image:: https://coveralls.io/repos/github/keeprocking/pygelf/badge.svg?branch=master
+   :target: https://coveralls.io/github/keeprocking/pygelf?branch=master
+.. image:: https://badge.fury.io/py/pygelf.svg
+   :target: https://pypi.python.org/pypi/pygelf
+.. image:: https://img.shields.io/pypi/dm/pygelf
+   :target: https://pypi.python.org/pypi/pygelf
 
-.. image:: https://travis-ci.org/jschneier/django-storages.svg?branch=master
-    :target: https://travis-ci.org/jschneier/django-storages
-    :alt: Build Status
+Python logging handlers with GELF (Graylog Extended Log Format) support.
 
-Installation
-============
-Installing from PyPI is as easy as doing:
+Currently TCP, UDP, TLS (encrypted TCP) and HTTP logging handlers are supported.
 
-.. code-block:: bash
+Get pygelf
+==========
+.. code:: python
 
-  pip install django-storages
+    pip install pygelf
 
-If you'd prefer to install from source (maybe there is a bugfix in master that
-hasn't been released yet) then the magic incantation you are looking for is:
-
-.. code-block:: bash
-
-  pip install -e 'git+https://github.com/jschneier/django-storages.git#egg=django-storages'
-
-Once that is done set ``DEFAULT_FILE_STORAGE`` to the backend of your choice.
-If, for example, you want to use the boto3 backend you would set:
-
-.. code-block:: python
-
-  DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-
-
-If you are using the ``FileSystemStorage`` as your storage management class in your models ``FileField`` fields, remove them
-and don't specify any storage parameter. That way, the ``DEFAULT_FILE_STORAGE`` class will be used by default in your field.
-For example, if you have a `photo` field defined as:
-
-.. code-block:: python
-
-    photo = models.FileField(
-        storage=FileSystemStorage(location=settings.MEDIA_ROOT),
-        upload_to='photos',
-    )
-
-Set it to just:
-
-.. code-block:: python
-
-    photo = models.FileField(
-        upload_to='photos',
-    )
-
-There are also a number of settings available to control how each storage backend functions,
-please consult the documentation for a comprehensive list.
-
-About
+Usage
 =====
-django-storages is a project to provide a variety of storage backends in a single library.
 
-This library is usually compatible with the currently supported versions of
-Django. Check the Trove classifiers in setup.py to be sure.
+.. code:: python
 
-django-storages is backed in part by `Tidelift`_. Check them out for all of your enterprise open source
-software commerical support needs.
+    from pygelf import GelfTcpHandler, GelfUdpHandler, GelfTlsHandler, GelfHttpHandler, GelfHttpsHandler
+    import logging
 
-.. _Tidelift: https://tidelift.com/subscription/pkg/pypi-django-storages?utm_source=pypi-django-storages&utm_medium=referral&utm_campaign=enterprise&utm_term=repo
 
-Security
-========
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger()
+    logger.addHandler(GelfTcpHandler(host='127.0.0.1', port=9401))
+    logger.addHandler(GelfUdpHandler(host='127.0.0.1', port=9402))
+    logger.addHandler(GelfTlsHandler(host='127.0.0.1', port=9403))
+    logger.addHandler(GelfHttpHandler(host='127.0.0.1', port=9404))
+    logger.addHandler(GelfHttpsHandler(host='127.0.0.1', port=9405))
 
-To report a security vulnerability, please use the `Tidelift security contact`_. Tidelift will coordinate the
-fix and disclosure. Please **do not** post a public issue on the tracker.
+    logger.info('hello gelf')
 
-.. _Tidelift security contact: https://tidelift.com/security
+Message structure
+=================
 
-History
-=======
-This repo began as a fork of the original library under the package name of django-storages-redux and
-became the official successor (releasing under django-storages on PyPI) in February of 2016.
+According to the GELF spec, each message has the following mandatory fields:
 
-Found a Bug? Something Unsupported?
-===================================
-I suspect that a few of the storage engines in backends/ have been unsupported
-for quite a long time. I personally only really need the S3Storage backend but
-welcome bug reports (and especially) patches and tests for some of the other
-backends.
+- **version**: '1.1', can be overridden when creating a logger
+- **short_message**: the log message itself
+- **timestamp**: current timestamp
+- **level**: syslog-compliant_ log level number (e.g. WARNING will be sent as 4)
+- **host**: hostname of the machine that sent the message
+- **full_message**: this field contains stack trace and is being written **ONLY** when logging an exception, e.g.
 
-Issues are tracked via GitHub issues at the `project issue page
-<https://github.com/jschneier/django-storages/issues>`_.
+.. code:: python
 
-Documentation
+    try:
+        1/0
+    except ZeroDivisionError as e:
+        logger.exception(e)
+
+.. _syslog-compliant: https://en.wikipedia.org/wiki/Syslog#Severity_level
+
+In debug mode (when handler was created with debug=True option) each message contains some extra fields (which are pretty self-explanatory): 
+
+- **_file**
+- **_line**
+- **_module**
+- **_func**
+- **_logger_name**
+
+Configuration
 =============
-Documentation for django-storages is located at https://django-storages.readthedocs.io/.
 
-Contributing
-============
+Each handler has the following parameters:
 
-#. `Check for open issues
-   <https://github.com/jschneier/django-storages/issues>`_ at the project
-   issue page or open a new issue to start a discussion about a feature or bug.
-#. Fork the `django-storages repository on GitHub
-   <https://github.com/jschneier/django-storages>`_ to start making changes.
-#. Add a test case to show that the bug is fixed or the feature is implemented
-   correctly.
-#. Bug me until I can merge your pull request. Also, don't forget to add
-   yourself to ``AUTHORS``.
+- **host**: IP address of the GELF input
+- **port**: port of the GELF input
+- **debug** (False by default): if true, each log message will include debugging info: module name, file name, line number, method name
+- **version** ('1.1' by default): GELF protocol version, can be overridden
+- **include_extra_fields** (False by default): if true, each log message will include all the extra fields set to LogRecord
+- **json_default** (:code:`str` with exception for several :code:`datetime` objects): function that is called for objects that cannot be serialized to JSON natively by python. Default implementation is custom function that returns result of :code:`isoformat()` method for :code:`datetime.datetime`, :code:`datetime.time`, :code:`datetime.date` objects and result of :code:`str(obj)` call for other objects (which is string representation of an object with fallback to :code:`repr`)
+
+Also, there are some handler-specific parameters.
+
+UDP:
+
+- **chunk\_size** (1300 by default) - maximum length of the message. If log length exceeds this value, it splits into multiple chunks (see https://www.graylog.org/resources/gelf/ section "chunked GELF") with the length equals to this value. This parameter must be less than the MTU_. If the logs don't seem to be delivered, try to reduce this value.
+- **compress** (True by default) - if true, compress log messages before sending them to the server
+
+.. _MTU: https://en.wikipedia.org/wiki/Maximum_transmission_unit
+
+TLS:
+
+- **validate** (False by default) - if true, validate server certificate. If server provides a certificate that doesn't exist in **ca_certs**, you won't be able to send logs over TLS
+- **ca_certs** (None by default) - path to CA bundle file. This parameter is required if **validate** is true.
+- **certfile** (None by default) - path to certificate file that will be used to identify ourselves to the remote endpoint. This is necessary when the remote server has client authentication required. If **certfile** contains the private key, it should be placed before the certificate.
+- **keyfile** (None by default) - path to the private key. If the private key is stored in **certfile** this parameter can be None.
+
+HTTP:
+
+- **compress** (True by default) - if true, compress log messages before sending them to the server
+- **path** ('/gelf' by default) - path of the HTTP input (http://docs.graylog.org/en/latest/pages/sending_data.html#gelf-via-http)
+- **timeout** (5 by default) - amount of seconds that HTTP client should wait before it discards the request if the server doesn't respond
+
+HTTPS:
+
+- **compress** (True by default) - if true, compress log messages before sending them to the server
+- **path** ('/gelf' by default) - path of the HTTP input (http://docs.graylog.org/en/latest/pages/sending_data.html#gelf-via-http)
+- **timeout** (5 by default) - amount of seconds that HTTP client should wait before it discards the request if the server doesn't respond
+- **validate** whether or not to validate the input's certificate
+- **param ca_certs** path to the CA certificate file that signed the certificate the input is using
+- **param certfile** not yet used
+- **param keyfile** not yet used
+- **param keyfile_password** not yet used
+
+Static fields
+=============
+
+If you need to include some static fields into your logs, simply pass them to the handler constructor. Each additional field should start with underscore. You can't add field '\_id'.
+
+Example:
+
+.. code:: python
+
+    handler = GelfUdpHandler(host='127.0.0.1', port=9402, _app_name='pygelf', _something=11)
+    logger.addHandler(handler)
+
+Dynamic fields
+==============
+
+If you need to include some dynamic fields into your logs, add them to record by using LoggingAdapter or logging.Filter and create handler with include_extra_fields set to True.
+All the non-trivial fields of the record will be sent to graylog2 with '\_' added before the name
+
+Example:
+
+.. code:: python
+
+    class ContextFilter(logging.Filter):
+
+        def filter(self, record):
+            record.job_id = threading.local().process_id
+            return True
+
+    logger.addFilter(ContextFilter())
+    handler = GelfUdpHandler(host='127.0.0.1', port=9402, include_extra_fields=True)
+    logger.addHandler(handler)
+
+Defining fields from environment
+================================
+
+If you need to include some fields from the environment into your logs, add them to record by using `additional_env_fields`.
+
+The following example will add an `env` field to the logs, taking its value from the environment variable `FLASK_ENV`.
+
+.. code:: python
+
+    handler = GelfTcpHandler(host='127.0.0.1', port=9402, include_extra_fields=True, additional_env_fields={'env': 'FLASK_ENV'})
+    logger.addHandler(handler)
+
+The following can also be used in defining logging from configuration files (yaml/ini):
+
+.. code:: ini
+
+    [formatters]
+    keys=standard
+
+    [formatter_standard]
+    class=logging.Formatter
+    format=%(message)s
+
+    [handlers]
+    keys=graylog
+
+    [handler_graylog]
+    class=pygelf.GelfTcpHandler
+    formatter=standard
+    args=('127.0.0.1', '12201')
+    kwargs={'include_extra_fields': True, 'debug': True, 'additional_env_fields': {'env': 'FLASK_ENV'}}
+
+    [loggers]
+    keys=root
+
+    [logger_root]
+    level=WARN
+    handlers=graylog
+
+Running tests
+=============
+
+To run tests, you'll need tox_. After installing, simply run it:
+
+.. code::
+
+    tox
+
+.. _tox: https://pypi.python.org/pypi/tox

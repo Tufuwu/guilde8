@@ -1,3 +1,4 @@
-include AUTHORS CHANGELOG.rst LICENSE README.rst
+include README.rst
+include LICENSE
+include tox.ini
 recursive-include tests *.py
-recursive-include docs Makefile conf.py make.bat *.rst
