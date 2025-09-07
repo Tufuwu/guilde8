@@ -1,3 +1,2 @@
-include README.rst
-include CHANGELOG.md
-include mjml/node/*
+include license.bsd license.lgpl readme.rst
+recursive-include docs *.html *.css *.png *.gif *.js
