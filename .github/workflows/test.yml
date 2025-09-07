@@ -1,4 +1,4 @@
-name: Python CI
+name: Python package
 
 on:
   push:
@@ -9,55 +9,31 @@ on:
       - main
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9']
-        numpy-version: ['1.19.4']  # Updated to a version that is more compatible with modern Python
+        python-version: ['3.8', '3.9', 'pypy-3.8']
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip  # Ensure pip is up-to-date
-          pip install numpy==${{ matrix.numpy-version }} scipy matplotlib>=3 cython>=0.29  # Updated Cython version
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi  # Check if requirements.txt exists
-
-      - name: Build project
-        run: |
-          bash dev/build.sh
-        continue-on-error: true  # Allow the build step to continue even if it fails
-
-      - name: Check for Cython errors
-        if: failure()
-        run: |
-          echo "Cython compilation failed. Please check the Cython files for errors."
-          exit 1
-
-      - name: Run tests
-        run: bash dev/test.sh || exit 1  # Ensure test script exits with error code if it fails
-
-      - name: Fix Cython return types
-        if: failure()
-        run: |
-          echo "Fixing Cython return types to int for error handling."
-          # Add script or command to modify Cython files to use 'int' return type where necessary
-          # Example: sed -i 's/void /int /g' path/to/cython/files/*.pyx
-          exit 1
-
-      - name: Retry Build
-        if: failure()
-        run: |
-          echo "Retrying build after fixing Cython return types."
-          bash dev/build.sh || exit 1
-
-      - name: Retry Tests
-        if: failure()
-        run: bash dev/test.sh || exit 1  # Ensure test script exits with error code if it fails
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U setuptools>=39.2.0 wheel
+        pip install numpy==1.15.4 scipy matplotlib>=3 cython>=0.28
+        python setup.py develop
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-distutils
+        sudo apt-get install -y python3-dev
+        sudo apt-get install -y build-essential
+        sudo apt-get install -y gfortran
+        sudo apt-get install -y libpython3-dev
+        sudo apt-get install -y libatlas-base-dev
+    - name: Run tests
+      run: python setup.py test
